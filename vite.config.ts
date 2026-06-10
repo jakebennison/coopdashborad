@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 import { apiPlugin } from './server/apiPlugin'
 
+const readEnvValue = (key: string, env: Record<string, string>) =>
+  (process.env[key] ?? env[key] ?? '').trim()
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
@@ -11,14 +14,15 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       apiPlugin(() => ({
-        anthropicApiKey: env.ANTHROPIC_API_KEY ?? '',
-        openXblApiKey: env.OPENXBL_API_KEY ?? '',
+        anthropicApiKey: readEnvValue('ANTHROPIC_API_KEY', env),
+        openXblApiKey: readEnvValue('OPENXBL_API_KEY', env),
       })),
     ],
     preview: {
       host: '0.0.0.0',
-      port: 4173,
-      allowedHosts: ['coopdashborad-production.up.railway.app'],
+      port: Number(process.env.PORT) || 4173,
+      strictPort: false,
+      allowedHosts: ['.up.railway.app'],
     },
   }
 })

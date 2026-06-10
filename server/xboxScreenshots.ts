@@ -33,13 +33,16 @@ type XboxExtractBody = {
 }
 
 const openXblRequest = async (path: string, apiKey: string) => {
-  if (!apiKey) {
-    throw new Error('Missing OPENXBL_API_KEY. Add it to your .env file and restart the dev server.')
+  const trimmedKey = apiKey.trim()
+  if (!trimmedKey) {
+    throw new Error(
+      'Missing OPENXBL_API_KEY. Set it in .env locally or as a Railway service variable, then restart the server.',
+    )
   }
 
   const response = await fetch(`${OPENXBL_BASE}${path}`, {
     headers: {
-      'X-Authorization': apiKey,
+      'X-Authorization': trimmedKey,
       Accept: 'application/json',
     },
   })
