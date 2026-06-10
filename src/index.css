@@ -1,0 +1,278 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  --color-page: #fafafa;
+  --color-card: #ffffff;
+  --color-ink: #101010;
+  --color-muted: #8f9bb3;
+  --color-border: #101010;
+  --color-accent-soft: #f3f3f3;
+  --color-hover: #f3f3f3;
+  --color-input-bg: #ffffff;
+  --color-primary-bg: #101010;
+  --color-primary-text: #ffffff;
+  --color-secondary-bg: #ffffff;
+  --color-secondary-text: #101010;
+  --color-warning-bg: #fff8ed;
+  --color-danger-bg: #fff5f4;
+  --color-danger-hover: #ffecea;
+  --color-grid: rgb(16 16 16 / 0.08);
+  --color-chart-muted: #a3aed0;
+  font-family: var(--font-sans);
+  background: var(--color-page);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root[data-theme='night'] {
+  color-scheme: dark;
+  --color-page: #101010;
+  --color-card: #171717;
+  --color-ink: #f5f5f5;
+  --color-muted: #a8b0c0;
+  --color-border: #f5f5f5;
+  --color-accent-soft: #222222;
+  --color-hover: #242424;
+  --color-input-bg: #171717;
+  --color-primary-bg: #f5f5f5;
+  --color-primary-text: #101010;
+  --color-secondary-bg: #171717;
+  --color-secondary-text: #f5f5f5;
+  --color-warning-bg: #2a2418;
+  --color-danger-bg: #2a1818;
+  --color-danger-hover: #351f1f;
+  --color-grid: rgb(245 245 245 / 0.1);
+  --color-chart-muted: #8f9bb3;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--color-page);
+  color: var(--color-ink);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.number {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.text-ink {
+  color: var(--color-ink);
+}
+
+.text-muted {
+  color: var(--color-muted);
+}
+
+.bg-page {
+  background: var(--color-page);
+}
+
+.bg-card {
+  background: var(--color-card);
+}
+
+.bg-soft {
+  background: var(--color-accent-soft);
+}
+
+.bg-warning {
+  background: var(--color-warning-bg);
+}
+
+.bg-danger {
+  background: var(--color-danger-bg);
+}
+
+.border-ink {
+  border-color: var(--color-border);
+}
+
+.divide-ink > :not(:last-child) {
+  border-color: var(--color-border);
+}
+
+.card {
+  border-radius: 1rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  box-shadow: none;
+}
+
+.card-soft {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+}
+
+.box-inner {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+}
+
+.record-odometer-stack > .record-odometer-value:not(:first-child) {
+  margin-top: -0.14em;
+}
+
+.record-display-font {
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  color: var(--color-ink);
+}
+
+.subtle-text {
+  color: var(--color-muted);
+}
+
+.btn-primary {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-primary-bg);
+  color: var(--color-primary-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: filter 0.15s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn-secondary {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary-bg);
+  color: var(--color-secondary-text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 0.15s ease;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-hover);
+}
+
+.btn-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn-tab-active {
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-primary-bg);
+  color: var(--color-primary-text);
+}
+
+.btn-tab-inactive {
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-secondary-bg);
+  color: var(--color-secondary-text);
+  transition: background-color 0.15s ease;
+}
+
+.btn-tab-inactive:hover {
+  background: var(--color-hover);
+}
+
+.badge-outline {
+  border-radius: 9999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.theme-toggle {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: background-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+  background: var(--color-hover);
+}
+
+.field-input {
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-input-bg);
+  color: var(--color-ink);
+  outline: none;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.field-input::placeholder {
+  color: var(--color-muted);
+}
+
+.field-input:focus {
+  border-color: var(--color-border);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-border) 12%, transparent);
+}
+
+.record-odometer-value {
+  margin: 0;
+  transform: translateZ(0);
+  transition:
+    filter 0.45s ease-out,
+    opacity 0.35s ease-out;
+}
+
+.record-odometer-value-animating {
+  filter: blur(3px);
+  opacity: 0.88;
+}
+
+.record-odometer-value-settled {
+  filter: blur(0);
+  opacity: 1;
+}
+
+.record-odometer-glow {
+  transition:
+    filter 0.45s ease-out,
+    opacity 0.35s ease-out,
+    text-shadow 0.45s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .record-odometer-value {
+    transition: none;
+  }
+
+  .record-odometer-value-animating {
+    filter: none;
+    opacity: 1;
+  }
+}
