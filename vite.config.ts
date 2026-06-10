@@ -15,5 +15,9 @@ export default defineConfig(({ mode }) => {
         openXblApiKey: env.OPENXBL_API_KEY ?? '',
       })),
     ],
+    preview: {
+      host: '0.0.0.0',
+      port: 4173,
+    },
   }
 })
