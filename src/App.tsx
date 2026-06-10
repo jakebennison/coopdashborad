@@ -1555,17 +1555,21 @@ function FormTicker({
 
   return (
     <div className="relative mt-6 overflow-visible rounded-2xl border border-ink bg-card p-4">
-      <div className="absolute right-3 top-3 z-10">
-        <FormManualEntry onSubmit={onAddManualEntry} />
+      <div className="mb-3 flex items-start justify-between gap-2 px-1">
+        <p className="record-display-font text-sm font-bold uppercase sm:text-base">Recent form</p>
+        <div className="flex shrink-0 items-center gap-2">
+          <p className="hidden text-xs font-medium text-muted sm:block">
+            {pageLabel(activePage)}
+            {pages.length > 1 ? ` · ${activePage + 1}/${pages.length}` : ''}
+          </p>
+          <FormManualEntry onSubmit={onAddManualEntry} />
+        </div>
       </div>
 
-      <div className="relative mb-3 flex items-center justify-between gap-3 px-1 pr-12 sm:pr-14">
-        <p className="record-display-font text-sm font-bold uppercase sm:text-base">Recent form</p>
-        <p className="shrink-0 text-xs font-medium text-muted">
-          {pageLabel(activePage)}
-          {pages.length > 1 ? ` · ${activePage + 1}/${pages.length}` : ''}
-        </p>
-      </div>
+      <p className="mb-3 px-1 text-xs font-medium text-muted sm:hidden">
+        {pageLabel(activePage)}
+        {pages.length > 1 ? ` · ${activePage + 1}/${pages.length}` : ''}
+      </p>
 
       <div
         ref={carouselRef}
@@ -1723,7 +1727,7 @@ function FormManualEntry({ onSubmit }: { onSubmit: (draft: ManualFormDraft) => v
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-4 items-center text-[10px] font-medium leading-none text-muted underline decoration-transparent underline-offset-2 transition hover:text-ink hover:decoration-current"
+        className="inline-flex shrink-0 items-center rounded-md border border-ink/20 px-1.5 py-0.5 text-[10px] font-medium leading-none text-muted transition hover:border-ink/40 hover:text-ink"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label="Add manual form entry"
