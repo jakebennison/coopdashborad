@@ -49,7 +49,9 @@ import {
   updateMatchRemote,
 } from './matchesApi'
 import OverallRecordDisplay, { AnimatedCountUp } from './OverallRecordDisplay'
+import WelcomeIntro from './WelcomeIntro'
 import { applyTheme, getThemeColors, readTheme, type Theme } from './theme'
+import { hasSeenWelcomeIntro } from './welcomeIntroStorage'
 
 const SEASON_CLUBS = ['Real Madrid', 'Manchester United', 'PSG'] as const
 import {
@@ -117,6 +119,7 @@ function App() {
   const [view, setView] = useState<View>('dashboard')
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null)
   const [theme, setTheme] = useState<Theme>(() => readTheme())
+  const [showWelcomeIntro, setShowWelcomeIntro] = useState(() => !hasSeenWelcomeIntro())
 
   useEffect(() => {
     let cancelled = false
@@ -165,6 +168,10 @@ function App() {
   useEffect(() => {
     applyTheme(theme)
   }, [theme])
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [view, selectedMatchId])
 
   const selectedMatch = useMemo(
     () => matches.find((match) => match.id === selectedMatchId) ?? null,
@@ -263,6 +270,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-page text-ink">
+      {showWelcomeIntro ? <WelcomeIntro onComplete={() => setShowWelcomeIntro(false)} /> : null}
       <div className="mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row">
         <aside className="card m-4 flex shrink-0 flex-col gap-8 p-5 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:self-start">
           <button type="button" className="text-left" onClick={() => setView('dashboard')}>
