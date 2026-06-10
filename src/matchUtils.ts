@@ -279,9 +279,7 @@ export type BaselineFormEntry = {
 }
 
 /** Pre-entered recent form, newest result first (leftmost tile). */
-export const BASELINE_FORM: BaselineFormEntry[] = [
-  { result: 'L', venue: 'away', opponent: 'Unknown opponent', myScore: 0, opponentScore: 1 },
-]
+export const BASELINE_FORM: BaselineFormEntry[] = []
 
 const baselineFormEntryToMatch = (entry: BaselineFormEntry, index: number): Match => ({
   id: -1 - index,
