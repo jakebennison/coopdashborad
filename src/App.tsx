@@ -107,8 +107,17 @@ const winDrawGradient = (wins: number, draws: number) => {
   if (wins === 0) return resultToneStyles.draw.background
 
   const winShare = (wins / total) * 100
-  return `linear-gradient(90deg, #06D6A0 0%, #05CD99 ${winShare}%, #FFC766 ${winShare}%, #FFB547 100%)`
+  const feather = Math.min(30, Math.max(16, (100 / total) * 8))
+  const start = Math.max(0, winShare - feather)
+  const end = Math.min(100, winShare + feather)
+  const midBefore = Math.max(0, winShare - feather * 0.4)
+  const midAfter = Math.min(100, winShare + feather * 0.4)
+
+  return `linear-gradient(90deg, #06D6A0 0%, #05CD99 ${start}%, #8ADFC8 ${midBefore}%, #FFD08A ${midAfter}%, #FFB547 ${end}%, #FFB547 100%)`
 }
+
+const streakRunBadgeClass =
+  'record-display-font shrink-0 rounded-sm border border-ink px-3 py-1.5 text-sm text-white sm:text-base'
 
 const winRateColor = (rate: number) => {
   if (rate >= 60) return resultColors.W
@@ -1831,10 +1840,7 @@ function FormTicker({
               <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">
                 Longest winning run
               </p>
-              <p
-                className="record-display-font rounded-sm border border-ink px-3 py-1.5 text-sm text-white sm:text-base"
-                style={{ background: resultToneStyles.win.background }}
-              >
+              <p className={streakRunBadgeClass} style={{ background: resultToneStyles.win.background }}>
                 {longestWinningRun.total}
               </p>
             </div>
@@ -1870,12 +1876,11 @@ function StreakRunBox({
 }) {
   return (
     <div className={bordered ? 'border-t border-ink' : undefined}>
-      <div
-        className="flex items-center justify-between gap-3 px-4 py-3"
-        style={{ background: winDrawGradient(stats.wins, stats.draws) }}
-      >
-        <p className="record-display-font text-[10px] uppercase text-white/90 sm:text-xs">{label}</p>
-        <p className="record-display-font text-lg text-white sm:text-xl">{stats.total}</p>
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+        <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">{label}</p>
+        <p className={streakRunBadgeClass} style={{ background: winDrawGradient(stats.wins, stats.draws) }}>
+          {stats.total}
+        </p>
       </div>
       {showBreakdown && stats.total > 0 ? (
         <div className="flex items-center justify-end gap-2 border-t border-ink bg-soft/40 px-4 py-2">
