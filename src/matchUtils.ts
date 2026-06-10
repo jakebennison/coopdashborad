@@ -348,12 +348,12 @@ export const getMatchRecord = (matches: Match[]) => ({
 })
 
 export const getSeasonRecord = (matches: Match[]) => {
-  const manual = getMatchRecord(matches.filter(isManualFormMatch))
+  const logged = getMatchRecord(matches)
 
   return {
-    W: BASELINE_RECORD.W + manual.W,
-    D: BASELINE_RECORD.D + manual.D,
-    L: BASELINE_RECORD.L + manual.L,
+    W: BASELINE_RECORD.W + logged.W,
+    D: BASELINE_RECORD.D + logged.D,
+    L: BASELINE_RECORD.L + logged.L,
   }
 }
 
