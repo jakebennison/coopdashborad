@@ -52,6 +52,7 @@ import {
   updateMatchRemote,
 } from './matchesApi'
 import OverallRecordDisplay, { AnimatedCountUp } from './OverallRecordDisplay'
+import UpdateTimeline from './UpdateTimeline'
 import WelcomeIntro from './WelcomeIntro'
 import { applyTheme, getThemeColors, readTheme, type Theme } from './theme'
 import { hasSeenWelcomeIntro } from './welcomeIntroStorage'
@@ -72,7 +73,7 @@ import {
   type XboxSyncStatus,
 } from './xbox'
 
-type View = 'dashboard' | 'stats' | 'add' | 'detail' | 'settings'
+type View = 'dashboard' | 'stats' | 'add' | 'detail' | 'settings' | 'updates'
 
 const resultColors: Record<Result, string> = {
   W: '#05CD99',
@@ -267,7 +268,9 @@ function App() {
           ? 'Add match'
           : view === 'settings'
             ? 'Settings'
-            : selectedMatch
+            : view === 'updates'
+              ? 'Tool updates'
+              : selectedMatch
               ? `PSG vs ${selectedMatch.opponent}`
               : 'Match detail'
 
@@ -307,6 +310,9 @@ function App() {
             </NavButton>
             <NavButton active={view === 'settings'} onClick={() => setView('settings')}>
               Settings
+            </NavButton>
+            <NavButton active={view === 'updates'} onClick={() => setView('updates')}>
+              Updates
             </NavButton>
           </nav>
 
@@ -397,6 +403,7 @@ function App() {
               onClearAll={resetAllMatches}
             />
           )}
+          {view === 'updates' && <UpdateTimeline />}
         </div>
       </div>
     </div>

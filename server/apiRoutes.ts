@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { readApiEnv } from './env'
 import { handleExtractMatchRequest } from './extractMatch'
 import { handleMatchesRequest } from './matchesApi'
+import { handleUpdateNotesRequest } from './updateNotesApi'
 import { handleXboxExtractMatchRequest, handleXboxScreenshotsRequest } from './xboxScreenshots'
 
 const sendUnhandledError = (res: ServerResponse) => {
@@ -39,6 +40,7 @@ export const handleApiRequest = async (
   }
 
   if (await handleMatchesRequest(req, res, pathname)) return true
+  if (await handleUpdateNotesRequest(req, res, pathname)) return true
 
   const env = readApiEnv()
 

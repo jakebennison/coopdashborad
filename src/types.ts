@@ -61,6 +61,15 @@ export interface Match {
 export type Result = Match['result']
 export type Venue = Match['venue']
 export type LoggedVia = 'screenshot' | 'quick-log' | 'xbox' | 'manual-form'
+
+export interface UpdateNote {
+  id: number
+  title: string
+  body: string
+  date: string
+  createdAt: string
+}
+
 export type PsgSide = 'left' | 'right' | 'both' | 'invalid'
 
 export interface ExtractedTeamStats {
