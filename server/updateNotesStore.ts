@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { UpdateNote } from '../src/types'
 import { initDatabase, isDatabaseConfigured, withDbClient } from './db'
+import { seedUpdateNoteEntry, UPDATE_NOTES_SEED } from './updateNotesSeed'
 
 const DATA_DIR = path.join(process.cwd(), '.data')
 const DATA_FILE = path.join(DATA_DIR, 'update-notes.json')
@@ -93,6 +94,7 @@ const rowToUpdateNote = (row: {
 
 export const listUpdateNotes = async (): Promise<UpdateNote[]> => {
   await ensureUpdateNotesStore()
+  await seedUpdateNotesIfEmpty()
 
   if (storageMode === 'postgres') {
     const result = await withDbClient((client) =>
@@ -106,6 +108,24 @@ export const listUpdateNotes = async (): Promise<UpdateNote[]> => {
   }
 
   return readFileStore()
+}
+
+const seedUpdateNotesIfEmpty = async () => {
+  const existing =
+    storageMode === 'postgres'
+      ? await withDbClient(async (client) => {
+          const result = await client.query('SELECT COUNT(*)::int AS count FROM update_notes')
+          return Number(result.rows[0]?.count ?? 0)
+        })
+      : (await readFileStore()).length
+
+  if (existing > 0) return
+
+  for (const entry of UPDATE_NOTES_SEED) {
+    await createUpdateNote(seedUpdateNoteEntry(entry))
+  }
+
+  console.log(`[updates] Seeded ${UPDATE_NOTES_SEED.length} changelog entries`)
 }
 
 export const createUpdateNote = async (note: UpdateNote): Promise<UpdateNote> => {
