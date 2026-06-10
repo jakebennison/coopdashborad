@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { normalizeVisionExtraction } from '../src/statParsing'
 import type { VisionExtraction } from '../src/types'
 import { normalizeImageMediaType } from './imageMedia'
+import { ANTHROPIC_REQUEST_MS, configureLongRunningRequest } from './httpTimeouts'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 const ANTHROPIC_VERSION = '2023-06-01'
@@ -120,8 +121,11 @@ export async function extractMatchFromImage(
   mediaType: string,
   apiKey: string,
 ): Promise<VisionExtraction> {
-  if (!apiKey) {
-    throw new Error('Missing ANTHROPIC_API_KEY. Add it to your .env file and restart the dev server.')
+  const trimmedKey = apiKey.trim()
+  if (!trimmedKey) {
+    throw new Error(
+      'Missing ANTHROPIC_API_KEY. Set it in .env locally or as a Railway service variable, then restart the server.',
+    )
   }
 
   if (!image) {
@@ -133,10 +137,11 @@ export async function extractMatchFromImage(
 
   const response = await fetch(ANTHROPIC_URL, {
     method: 'POST',
+    signal: AbortSignal.timeout(ANTHROPIC_REQUEST_MS),
     headers: {
       'anthropic-version': ANTHROPIC_VERSION,
       'content-type': 'application/json',
-      'x-api-key': apiKey,
+      'x-api-key': trimmedKey,
     },
     body: JSON.stringify({
       model: MODEL,
@@ -198,11 +203,21 @@ export async function readJsonBody<T>(req: IncomingMessage): Promise<T> {
   return JSON.parse(Buffer.concat(chunks).toString('utf8')) as T
 }
 
+const formatExtractError = (error: unknown) => {
+  if (error instanceof Error && error.name === 'TimeoutError') {
+    return 'Claude Vision took too long to respond. Try again in a moment.'
+  }
+
+  return error instanceof Error ? error.message : 'Could not extract match data.'
+}
+
 export async function handleExtractMatchRequest(
   req: IncomingMessage,
   res: ServerResponse,
   apiKey: string,
 ) {
+  configureLongRunningRequest(req, res)
+
   try {
     const body = await readJsonBody<ExtractRequestBody>(req)
     const extraction = await extractMatchFromImage(
@@ -215,8 +230,9 @@ export async function handleExtractMatchRequest(
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify(extraction))
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Could not extract match data.'
-    res.statusCode = 400
+    const message = formatExtractError(error)
+    const status = error instanceof Error && error.name === 'TimeoutError' ? 504 : 400
+    res.statusCode = status
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({ error: message }))
   }

@@ -1,13 +1,12 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Connect } from 'vite'
 import type { Plugin } from 'vite'
+import { readApiEnv, type ApiEnv } from './env'
 import { handleExtractMatchRequest } from './extractMatch'
+import { configureHttpTimeouts } from './httpTimeouts'
 import { handleXboxExtractMatchRequest, handleXboxScreenshotsRequest } from './xboxScreenshots'
 
-export type ApiEnv = {
-  anthropicApiKey: string
-  openXblApiKey: string
-}
+export type { ApiEnv } from './env'
 
 const routeRequest = (
   req: IncomingMessage,
@@ -35,18 +34,20 @@ const routeRequest = (
   next()
 }
 
-const attachApi = (middlewares: Connect.Server, getEnv: () => ApiEnv) => {
-  middlewares.use((req, res, next) => routeRequest(req, res, next, getEnv()))
+const attachApi = (middlewares: Connect.Server) => {
+  middlewares.use((req, res, next) => routeRequest(req, res, next, readApiEnv()))
 }
 
-export function apiPlugin(getEnv: () => ApiEnv): Plugin {
+export function apiPlugin(): Plugin {
   return {
     name: 'extract-match-api',
     configureServer(server) {
-      attachApi(server.middlewares, getEnv)
+      configureHttpTimeouts(server.httpServer)
+      attachApi(server.middlewares)
     },
     configurePreviewServer(server) {
-      attachApi(server.middlewares, getEnv)
+      configureHttpTimeouts(server.httpServer)
+      attachApi(server.middlewares)
     },
   }
 }

@@ -13,6 +13,7 @@ import {
   readScreenshotCache,
   writeScreenshotCache,
 } from './xboxScreenshotCache'
+import { configureLongRunningRequest } from './httpTimeouts'
 
 const OPENXBL_BASE = 'https://xbl.io'
 const ALLOWED_IMAGE_HOSTS = ['xboxlive.com', 'xbox.com', 'microsoft.com', 'windows.net']
@@ -234,6 +235,8 @@ export async function handleXboxExtractMatchRequest(
   anthropicApiKey: string,
   openXblApiKey: string,
 ) {
+  configureLongRunningRequest(req, res)
+
   try {
     const body = await readJsonBody<XboxExtractBody>(req)
     const contentId = body.contentId?.trim()
