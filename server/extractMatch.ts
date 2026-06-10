@@ -4,6 +4,7 @@ import type { VisionExtraction } from '../src/types'
 import { normalizeImageMediaType } from './imageMedia'
 import { normalizeEnvValue } from './env'
 import { ANTHROPIC_REQUEST_MS, configureLongRunningRequest } from './httpTimeouts'
+import { createUploadArchiveKey, savePendingScreenshot } from './screenshotArchive'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 const ANTHROPIC_VERSION = '2023-06-01'
@@ -234,15 +235,29 @@ export async function handleExtractMatchRequest(
 
   try {
     const body = await readJsonBody<ExtractRequestBody>(req)
+    const mediaType = normalizeImageMediaType(
+      body.mediaType ?? 'image/png',
+      '',
+      Buffer.from(body.image ?? '', 'base64'),
+    )
+    const imageBuffer = Buffer.from(body.image ?? '', 'base64')
+
+    if (imageBuffer.length < 16) {
+      throw new Error('Screenshot image data is missing or too small.')
+    }
+
+    const screenshotArchiveKey = createUploadArchiveKey()
+    await savePendingScreenshot(screenshotArchiveKey, imageBuffer, mediaType, 'upload')
+
     const extraction = await extractMatchFromImage(
       body.image ?? '',
-      body.mediaType ?? 'image/png',
+      mediaType,
       apiKey,
     )
 
     res.statusCode = 200
     res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify(extraction))
+    res.end(JSON.stringify({ extraction, screenshotArchiveKey }))
   } catch (error) {
     const message = formatExtractError(error)
     const status = error instanceof Error && error.name === 'TimeoutError' ? 504 : 400

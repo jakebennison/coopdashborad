@@ -1,6 +1,12 @@
 import { readApiError } from './apiClient'
 import type { VisionExtraction } from './types'
 
+type ExtractMatchResponse = {
+  extraction: VisionExtraction
+  screenshotArchiveKey?: string | null
+  error?: string
+}
+
 export const fileToBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -12,7 +18,9 @@ export const fileToBase64 = (file: File): Promise<string> =>
     reader.readAsDataURL(file)
   })
 
-export const extractMatchFromScreenshot = async (file: File): Promise<VisionExtraction> => {
+export const extractMatchFromScreenshot = async (
+  file: File,
+): Promise<{ extraction: VisionExtraction; screenshotArchiveKey: string | null }> => {
   const base64 = await fileToBase64(file)
   const response = await fetch('/api/extract-match', {
     method: 'POST',
@@ -31,7 +39,17 @@ export const extractMatchFromScreenshot = async (file: File): Promise<VisionExtr
     )
   }
 
-  const data = (await response.json()) as VisionExtraction
+  const data = (await response.json()) as ExtractMatchResponse | VisionExtraction
 
-  return data
+  if ('extraction' in data && data.extraction) {
+    return {
+      extraction: data.extraction,
+      screenshotArchiveKey: data.screenshotArchiveKey ?? null,
+    }
+  }
+
+  return {
+    extraction: data as VisionExtraction,
+    screenshotArchiveKey: null,
+  }
 }

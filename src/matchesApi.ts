@@ -24,11 +24,17 @@ export const fetchMatches = async (): Promise<Match[]> => {
   return parseMatches(data)
 }
 
-export const createMatchRemote = async (match: Match): Promise<Match> => {
+export const createMatchRemote = async (
+  match: Match,
+  screenshotArchiveKey?: string | null,
+): Promise<Match> => {
   const response = await fetch('/api/matches', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(match),
+    body: JSON.stringify({
+      match,
+      screenshotArchiveKey: screenshotArchiveKey ?? null,
+    }),
   })
 
   if (!response.ok) {
@@ -53,6 +59,8 @@ export const updateMatchRemote = async (match: Match): Promise<Match> => {
   const data = (await response.json()) as MatchResponse
   return data.match
 }
+
+export const getMatchScreenshotUrl = (matchId: number) => `/api/matches/${matchId}/screenshot`
 
 export const deleteMatchRemote = async (id: number): Promise<void> => {
   const response = await fetch(`/api/matches/${id}`, { method: 'DELETE' })

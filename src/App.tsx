@@ -46,6 +46,7 @@ import {
   deleteAllMatchesRemote,
   deleteMatchRemote,
   fetchMatches,
+  getMatchScreenshotUrl,
   updateMatchRemote,
 } from './matchesApi'
 import OverallRecordDisplay, { AnimatedCountUp } from './OverallRecordDisplay'
@@ -182,8 +183,8 @@ function App() {
     const match = toMatch(draft)
 
     try {
-      await createMatchRemote(match)
-      setMatches((current) => sortMatchesNewestFirst([match, ...current]))
+      const saved = await createMatchRemote(match, draft.screenshotArchiveKey)
+      setMatches((current) => sortMatchesNewestFirst([saved, ...current]))
       setMatchesError(null)
       setSelectedMatchId(null)
       setView('dashboard')
@@ -782,7 +783,8 @@ function ScreenshotFlow({
         screenshotDate: fileDateToInputValue(file),
       }
       setExtractDraftOptions(options)
-      const extracted = await extractMatchFromScreenshot(file)
+      const { extraction: extracted, screenshotArchiveKey } = await extractMatchFromScreenshot(file)
+      setExtractDraftOptions({ ...options, screenshotArchiveKey })
       if (extracted.psgSide === 'both') {
         setExtraction(extracted)
       } else {
@@ -826,11 +828,13 @@ function ScreenshotFlow({
     setIsProcessing(true)
 
     try {
-      const { extraction: extracted, contentId } = await extractMatchFromXboxScreenshot(screenshot)
+      const { extraction: extracted, contentId, screenshotArchiveKey } =
+        await extractMatchFromXboxScreenshot(screenshot)
       const options: ExtractionDraftOptions = {
         loggedVia: 'xbox',
         xboxContentId: contentId,
         screenshotDate: screenshot.captureDate,
+        screenshotArchiveKey,
       }
       setExtractDraftOptions(options)
 
@@ -1531,7 +1535,9 @@ function MatchDetail({
         </button>
         {confirmDelete ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-[#EE5D50]">Delete this match?</span>
+            <span className="text-sm font-medium text-[#EE5D50]">
+              Delete this match and all its data?
+            </span>
             <button
               type="button"
               onClick={() => setConfirmDelete(false)}
@@ -1586,6 +1592,23 @@ function MatchDetail({
           <div className={`${innerBoxClass} mt-4 px-4 py-3`}>
             <p className="record-display-font text-xs font-bold uppercase text-muted">Reason for manual entry</p>
             <p className="mt-2 text-sm text-ink">{match.manualEntryReason}</p>
+          </div>
+        ) : null}
+        {match.hasArchivedScreenshot ? (
+          <div className={`${innerBoxClass} mt-4 overflow-hidden`}>
+            <p className="record-display-font px-4 pt-4 text-xs font-bold uppercase text-muted">
+              Archived screenshot
+            </p>
+            <p className="px-4 pb-3 text-xs text-muted">
+              Saved when this match was logged. If Xbox removes the capture from the cloud, this match
+              and its stats stay here. Use Delete match above if you want to remove it yourself.
+            </p>
+            <img
+              src={getMatchScreenshotUrl(match.id)}
+              alt={`Archived stats screenshot for PSG vs ${match.opponent}`}
+              className="w-full border-t border-ink object-contain"
+              loading="lazy"
+            />
           </div>
         ) : null}
       </section>
@@ -2245,7 +2268,9 @@ function Settings({
                   </div>
                   {pendingDeleteId === match.id ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium text-[#EE5D50]">Delete this match?</span>
+                      <span className="text-sm font-medium text-[#EE5D50]">
+                        Delete this match and all its data?
+                      </span>
                       <button
                         type="button"
                         onClick={() => setPendingDeleteId(null)}
@@ -2283,9 +2308,18 @@ function Settings({
       </section>
 
       <section className={`${panelClass} p-6`}>
+        <h3 className={headingClass}>Data retention</h3>
+        <p className="mt-2 text-sm text-muted">
+          Logged matches are stored in the shared tracker, not on Xbox. If Xbox deletes a capture from
+          the cloud, your saved scores, stats, comments, and archived screenshot stay until you delete
+          the match here.
+        </p>
+      </section>
+
+      <section className={`${panelClass} p-6`}>
         <h3 className={headingClass}>Reset all data</h3>
         <p className="mt-2 text-sm text-muted">
-          Clears every logged match from this browser. Useful when testing screenshot extraction.
+          Permanently removes every logged match, archived screenshot, and comment from the shared tracker.
         </p>
         {confirmClearAll ? (
           <div className="mt-5 flex flex-wrap items-center gap-3">

@@ -14,6 +14,10 @@ import {
   writeScreenshotCache,
 } from './xboxScreenshotCache'
 import { configureLongRunningRequest } from './httpTimeouts'
+import {
+  createXboxArchiveKey,
+  savePendingScreenshot,
+} from './screenshotArchive'
 
 const OPENXBL_BASE = 'https://xbl.io'
 const ALLOWED_IMAGE_HOSTS = ['xboxlive.com', 'xbox.com', 'microsoft.com', 'windows.net']
@@ -253,11 +257,16 @@ export async function handleXboxExtractMatchRequest(
     }
 
     const { base64, mediaType } = await downloadScreenshotAsBase64(downloadUrl)
+    const imageBuffer = Buffer.from(base64, 'base64')
+    const screenshotArchiveKey = createXboxArchiveKey(contentId)
+    await savePendingScreenshot(screenshotArchiveKey, imageBuffer, mediaType, 'xbox', contentId)
+
     const extraction = await extractMatchFromImage(base64, mediaType, anthropicApiKey)
 
     sendJson(res, 200, {
       extraction,
       contentId,
+      screenshotArchiveKey,
     })
   } catch (error) {
     const message =

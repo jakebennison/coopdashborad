@@ -157,6 +157,8 @@ export type ExtractionDraftOptions = {
   xboxContentId?: string | null
   /** Xbox capture date or uploaded file date — when the match was played. */
   screenshotDate?: string | null
+  /** Server-side pending archive created during Vision extraction. */
+  screenshotArchiveKey?: string | null
 }
 
 export const resolveDraftMatchDate = (
@@ -240,6 +242,7 @@ export const extractionToDraft = (
       stats: buildDraftStats(myTeam),
       opponentStats: buildOpponentStatsFromExtraction(opponentTeam),
       xboxContentId: options?.xboxContentId ?? null,
+      screenshotArchiveKey: options?.screenshotArchiveKey ?? null,
       comment: null,
       commentAuthor: null,
     }
@@ -257,6 +260,7 @@ export const extractionToDraft = (
     stats,
     opponentStats: buildOpponentStatsFromExtraction(extraction.opponent),
     xboxContentId: options?.xboxContentId ?? null,
+    screenshotArchiveKey: options?.screenshotArchiveKey ?? null,
     comment: null,
     commentAuthor: null,
   }

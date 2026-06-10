@@ -51,6 +51,7 @@ export interface Match {
   stats: MatchStats | null
   opponentStats?: Partial<MatchStats> | null
   xboxContentId?: string | null
+  hasArchivedScreenshot?: boolean
   comments?: MatchComment[]
   /** @deprecated Migrated to comments on read */
   comment?: string | null
@@ -132,6 +133,7 @@ export interface DraftMatch {
   stats: MatchStats | null
   opponentStats?: Partial<MatchStats> | null
   xboxContentId?: string | null
+  screenshotArchiveKey?: string | null
   comment?: string | null
   commentAuthor?: string | null
 }

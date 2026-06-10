@@ -26,6 +26,7 @@ type XboxScreenshotsResponse = {
 type XboxExtractResponse = {
   extraction: VisionExtraction
   contentId?: string | null
+  screenshotArchiveKey?: string | null
   error?: string
 }
 
@@ -144,6 +145,7 @@ export const extractMatchFromXboxScreenshot = async (
   return {
     extraction: data.extraction,
     contentId: data.contentId ?? screenshot.contentId,
+    screenshotArchiveKey: data.screenshotArchiveKey ?? null,
   }
 }
 
