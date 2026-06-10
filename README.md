@@ -31,7 +31,7 @@ Use the server-side variable name `ANTHROPIC_API_KEY` (not `VITE_...`). On Railw
 
 Match data is stored centrally through `/api/matches`:
 
-- **Railway:** add a PostgreSQL database to the project, then attach `DATABASE_URL` to the app service and redeploy.
+- **Railway:** see [docs/RAILWAY-POSTGRES.md](docs/RAILWAY-POSTGRES.md) for step-by-step Postgres setup.
 - **Local dev without Postgres:** if `DATABASE_URL` is unset, the server falls back to `.data/matches.json`.
 
 All users of the deployed app see the same match list once Postgres is connected.

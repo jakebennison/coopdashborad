@@ -10,6 +10,9 @@
     "preview": "vite preview",
     "test": "node --experimental-strip-types --test server/*.test.ts",
     "test:xbox": "node --env-file=.env scripts/xbox-smoke-test.mjs",
+    "railway:login": "npx @railway/cli login",
+    "railway:link": "npx @railway/cli link",
+    "railway:add-postgres": "npx @railway/cli add --database postgres",
     "start": "node dist-server/start.mjs"
   },
   "repository": {

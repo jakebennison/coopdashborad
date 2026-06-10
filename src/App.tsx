@@ -30,8 +30,10 @@ import {
   isManualFormMatch,
   isStatsMatch,
   normaliseTeamName,
+  readMatches,
   sortMatchesNewestFirst,
   statFields,
+  STORAGE_KEY,
   toMatch,
   updateMatchComments,
   type ExtractionDraftOptions,
@@ -121,9 +123,30 @@ function App() {
 
     setMatchesLoading(true)
     fetchMatches()
-      .then((loaded) => {
+      .then(async (loaded) => {
         if (cancelled) return
-        setMatches(loaded)
+
+        if (loaded.length) {
+          setMatches(loaded)
+          setMatchesError(null)
+          return
+        }
+
+        const localMatches = readMatches()
+        if (!localMatches.length) {
+          setMatches([])
+          setMatchesError(null)
+          return
+        }
+
+        for (const match of localMatches) {
+          await createMatchRemote(match)
+        }
+
+        window.localStorage.removeItem(STORAGE_KEY)
+        const imported = await fetchMatches()
+        if (cancelled) return
+        setMatches(imported)
         setMatchesError(null)
       })
       .catch((error) => {

@@ -31,6 +31,13 @@ export const handleApiRequest = async (
   res: ServerResponse,
   pathname: string,
 ): Promise<boolean> => {
+  if (pathname === '/api/health' && req.method === 'GET') {
+    res.statusCode = 200
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ ok: true }))
+    return true
+  }
+
   if (await handleMatchesRequest(req, res, pathname)) return true
 
   const env = readApiEnv()
