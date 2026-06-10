@@ -2,13 +2,15 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { normalizeVisionExtraction } from '../src/statParsing'
 import type { VisionExtraction } from '../src/types'
 import { normalizeImageMediaType } from './imageMedia'
+import { normalizeEnvValue } from './env'
 import { ANTHROPIC_REQUEST_MS, configureLongRunningRequest } from './httpTimeouts'
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 const ANTHROPIC_VERSION = '2023-06-01'
-const DEFAULT_VISION_MODEL = 'claude-sonnet-4-20250514'
+const DEFAULT_VISION_MODEL = 'claude-sonnet-4-6'
 
-const visionModel = () => process.env.ANTHROPIC_VISION_MODEL?.trim() || DEFAULT_VISION_MODEL
+const visionModel = () =>
+  normalizeEnvValue(process.env.ANTHROPIC_VISION_MODEL) || DEFAULT_VISION_MODEL
 
 const visionPrompt = `This is a post-match stats screenshot from EA Sports FC on Xbox.
 
@@ -175,6 +177,11 @@ export async function extractMatchFromImage(
     if (response.status === 401) {
       throw new Error(
         'Anthropic rejected the API key. In Railway, set ANTHROPIC_API_KEY to a fresh key from console.anthropic.com (no quotes), then redeploy.',
+      )
+    }
+    if (response.status === 404 && details.includes('model:')) {
+      throw new Error(
+        'Anthropic model not found. Remove ANTHROPIC_VISION_MODEL from Railway or set it to claude-sonnet-4-6, then redeploy.',
       )
     }
     throw new Error(`Claude Vision extraction failed (${response.status}): ${details}`)
