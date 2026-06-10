@@ -172,6 +172,11 @@ export async function extractMatchFromImage(
 
   if (!response.ok) {
     const details = await response.text()
+    if (response.status === 401) {
+      throw new Error(
+        'Anthropic rejected the API key. In Railway, set ANTHROPIC_API_KEY to a fresh key from console.anthropic.com (no quotes), then redeploy.',
+      )
+    }
     throw new Error(`Claude Vision extraction failed (${response.status}): ${details}`)
   }
 

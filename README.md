@@ -21,8 +21,10 @@ cp .env.example .env
 Add your Anthropic key to `.env`:
 
 ```bash
-VITE_ANTHROPIC_API_KEY=your_api_key_here
+ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+Use the server-side variable name `ANTHROPIC_API_KEY` (not `VITE_...`). On Railway, add the same variable in the service settings with no quotes around the value.
 
 The app stores match data in `localStorage` as JSON under `psg-coop-seasons-matches`.
 
