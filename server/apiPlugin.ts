@@ -1,41 +1,25 @@
-import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Connect } from 'vite'
 import type { Plugin } from 'vite'
-import { readApiEnv, type ApiEnv } from './env'
-import { handleExtractMatchRequest } from './extractMatch'
+import { handleApiRequest } from './apiRoutes'
 import { configureHttpTimeouts } from './httpTimeouts'
-import { handleXboxExtractMatchRequest, handleXboxScreenshotsRequest } from './xboxScreenshots'
 
 export type { ApiEnv } from './env'
 
-const routeRequest = (
-  req: IncomingMessage,
-  res: ServerResponse,
-  next: Connect.NextFunction,
-  env: ApiEnv,
-) => {
-  const pathname = req.url?.split('?')[0]
-
-  if (pathname === '/api/extract-match' && req.method === 'POST') {
-    void handleExtractMatchRequest(req, res, env.anthropicApiKey)
-    return
-  }
-
-  if (pathname === '/api/xbox/screenshots' && req.method === 'GET') {
-    void handleXboxScreenshotsRequest(req, res, env.openXblApiKey)
-    return
-  }
-
-  if (pathname === '/api/xbox/extract-match' && req.method === 'POST') {
-    void handleXboxExtractMatchRequest(req, res, env.anthropicApiKey, env.openXblApiKey)
-    return
-  }
-
-  next()
-}
-
 const attachApi = (middlewares: Connect.Server) => {
-  middlewares.use((req, res, next) => routeRequest(req, res, next, readApiEnv()))
+  middlewares.use((req, res, next) => {
+    void (async () => {
+      const pathname = req.url?.split('?')[0] ?? ''
+      if (await handleApiRequest(req, res, pathname)) return
+      next()
+    })().catch((error) => {
+      console.error('[api]', error)
+      if (!res.headersSent) {
+        res.statusCode = 500
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ error: 'Internal server error.' }))
+      }
+    })
+  })
 }
 
 export function apiPlugin(): Plugin {

@@ -6,7 +6,9 @@ import { ANTHROPIC_REQUEST_MS, configureLongRunningRequest } from './httpTimeout
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
 const ANTHROPIC_VERSION = '2023-06-01'
-const MODEL = 'claude-opus-4-5'
+const DEFAULT_VISION_MODEL = 'claude-sonnet-4-20250514'
+
+const visionModel = () => process.env.ANTHROPIC_VISION_MODEL?.trim() || DEFAULT_VISION_MODEL
 
 const visionPrompt = `This is a post-match stats screenshot from EA Sports FC on Xbox.
 
@@ -144,7 +146,7 @@ export async function extractMatchFromImage(
       'x-api-key': trimmedKey,
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: visionModel(),
       max_tokens: 1600,
       messages: [
         {

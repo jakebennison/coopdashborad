@@ -1,3 +1,4 @@
+import { readApiError } from './apiClient'
 import type { VisionExtraction } from './types'
 
 export const fileToBase64 = (file: File): Promise<string> =>
@@ -24,11 +25,13 @@ export const extractMatchFromScreenshot = async (file: File): Promise<VisionExtr
     }),
   })
 
-  const data = (await response.json()) as VisionExtraction & { error?: string }
-
   if (!response.ok) {
-    throw new Error(data.error ?? 'Could not extract match data from screenshot.')
+    throw new Error(
+      await readApiError(response, 'Could not extract match data from screenshot.'),
+    )
   }
+
+  const data = (await response.json()) as VisionExtraction
 
   return data
 }

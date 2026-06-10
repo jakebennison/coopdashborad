@@ -1,4 +1,5 @@
 import type { VisionExtraction } from './types'
+import { readApiError } from './apiClient'
 
 export type XboxScreenshotItem = {
   contentId: string
@@ -70,11 +71,12 @@ export const fetchXboxScreenshots = async (importedIds: string[] = []) => {
   const imported = importedIds.filter(Boolean).join(',')
   const query = imported ? `?imported=${encodeURIComponent(imported)}` : ''
   const response = await fetch(`/api/xbox/screenshots${query}`)
-  const data = (await response.json()) as XboxScreenshotsResponse
 
   if (!response.ok) {
-    throw new Error(data.error ?? 'Could not load Xbox screenshots.')
+    throw new Error(await readApiError(response, 'Could not load Xbox screenshots.'))
   }
+
+  const data = (await response.json()) as XboxScreenshotsResponse
 
   const localCache = readLocalXboxCache()
   const screenshots =
@@ -131,11 +133,13 @@ export const extractMatchFromXboxScreenshot = async (
     }),
   })
 
-  const data = (await response.json()) as XboxExtractResponse
-
   if (!response.ok) {
-    throw new Error(data.error ?? 'Could not extract match data from Xbox screenshot.')
+    throw new Error(
+      await readApiError(response, 'Could not extract match data from Xbox screenshot.'),
+    )
   }
+
+  const data = (await response.json()) as XboxExtractResponse
 
   return {
     extraction: data.extraction,

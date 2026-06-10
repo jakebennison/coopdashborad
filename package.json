@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run build:server",
+    "build:server": "npx --yes esbuild@0.28.0 server/productionServer.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist-server/start.mjs",
     "preview": "vite preview",
     "test": "node --experimental-strip-types --test server/*.test.ts",
     "test:xbox": "node --env-file=.env scripts/xbox-smoke-test.mjs",
-    "start": "npm run build && npm run preview"
+    "start": "node dist-server/start.mjs"
   },
   "repository": {
     "type": "git",

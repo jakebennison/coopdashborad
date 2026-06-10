@@ -635,8 +635,15 @@ function ScreenshotFlow({
   const [xboxLoaded, setXboxLoaded] = useState(false)
   const [selectedXboxId, setSelectedXboxId] = useState<string | null>(null)
   const [showXboxLibrary, setShowXboxLibrary] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const draftOptions = extractDraftOptions ?? undefined
+
+  const resetFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
 
   const resetFlow = () => {
     setError(null)
@@ -668,6 +675,7 @@ function ScreenshotFlow({
       setError(message)
     } finally {
       setIsProcessing(false)
+      resetFileInput()
     }
   }
 
@@ -848,12 +856,18 @@ function ScreenshotFlow({
           <p className="mt-2 text-sm text-muted">
             Claude Vision will detect the side, score, and visible stats for review.
           </p>
-          <label className={`${primaryButtonClass} mt-5 inline-flex cursor-pointer`}>
+          <label
+            className={`${primaryButtonClass} mt-5 inline-flex ${
+              isProcessing ? 'pointer-events-none opacity-60' : 'cursor-pointer'
+            }`}
+          >
             Select screenshot
             <input
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               className="sr-only"
+              disabled={isProcessing}
               onChange={(event) => void processFile(event.target.files?.[0])}
             />
           </label>
@@ -1029,7 +1043,10 @@ function ScreenshotFlow({
           <p className="font-semibold text-[#EE5D50]">{error}</p>
           <button
             type="button"
-            onClick={() => setError(null)}
+            onClick={() => {
+              setError(null)
+              resetFileInput()
+            }}
             className="mt-3 rounded-xl border border-ink bg-card px-4 py-2 text-sm font-semibold text-[#EE5D50] transition hover:bg-danger"
           >
             Try again
