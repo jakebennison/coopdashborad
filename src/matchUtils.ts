@@ -268,7 +268,7 @@ export const sortMatchesNewestFirst = (matches: Match[]) =>
     return dateDiff || b.id - a.id
   })
 
-export const BASELINE_RECORD = { W: 184, D: 49, L: 152 } as const
+export const BASELINE_RECORD = { W: 184, D: 48, L: 151 } as const
 
 export type BaselineFormEntry = {
   result: Result
