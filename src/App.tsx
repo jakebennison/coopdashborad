@@ -40,6 +40,7 @@ import {
   updateMatchComments,
   type ExtractionDraftOptions,
   type ManualFormDraft,
+  type StreakRunStats,
 } from './matchUtils'
 import { fileDateToInputValue } from './statParsing'
 import DetailedStats from './DetailedStats'
@@ -98,6 +99,16 @@ const resultToneStyles = {
 
 const resultToTone = (result: Result): keyof typeof resultToneStyles =>
   result === 'W' ? 'win' : result === 'D' ? 'draw' : 'loss'
+
+const winDrawGradient = (wins: number, draws: number) => {
+  const total = wins + draws
+  if (total <= 0) return 'linear-gradient(145deg, #E9EDF7 0%, #DDE3F0 100%)'
+  if (draws === 0) return resultToneStyles.win.background
+  if (wins === 0) return resultToneStyles.draw.background
+
+  const winShare = (wins / total) * 100
+  return `linear-gradient(90deg, #06D6A0 0%, #05CD99 ${winShare}%, #FFC766 ${winShare}%, #FFB547 100%)`
+}
 
 const winRateColor = (rate: number) => {
   if (rate >= 60) return resultColors.W
@@ -1651,9 +1662,9 @@ function FormTicker({
   onAddManualEntry,
 }: {
   matches: Match[]
-  unbeatenStreak: number
-  longestUnbeatenRun: number
-  longestWinningRun: number
+  unbeatenStreak: StreakRunStats
+  longestUnbeatenRun: StreakRunStats
+  longestWinningRun: StreakRunStats
   trackerRecord: { W: number; D: number; L: number }
   onAddManualEntry: (draft: ManualFormDraft) => void
 }) {
@@ -1798,12 +1809,7 @@ function FormTicker({
       ) : null}
 
       <div className="relative mt-4 overflow-hidden rounded-xl border border-ink">
-        <div className="flex items-center justify-between gap-3 px-4 py-3">
-          <p className="record-display-font text-xs uppercase sm:text-sm">Current unbeaten streak</p>
-          <p className="record-display-font text-lg sm:text-xl">
-            {unbeatenStreak} {unbeatenStreak === 1 ? 'game' : 'games'}
-          </p>
-        </div>
+        <StreakRunBox label="Current unbeaten streak" stats={unbeatenStreak} />
         <button
           type="button"
           onClick={() => setRecordsOpen((open) => !open)}
@@ -1814,21 +1820,22 @@ function FormTicker({
           <span className="text-xs font-semibold text-muted">{recordsOpen ? '▲' : '▼'}</span>
         </button>
         {recordsOpen ? (
-          <div className="border-t border-ink bg-soft/40">
-            <div className="flex items-center justify-between gap-3 px-4 py-2.5">
-              <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">
-                Longest unbeaten run
-              </p>
-              <p className="record-display-font text-sm sm:text-base">
-                {longestUnbeatenRun} {longestUnbeatenRun === 1 ? 'game' : 'games'}
-              </p>
-            </div>
+          <div className="border-t border-ink">
+            <StreakRunBox
+              label="Longest unbeaten run"
+              stats={longestUnbeatenRun}
+              showBreakdown
+              bordered
+            />
             <div className="flex items-center justify-between gap-3 border-t border-ink px-4 py-2.5">
               <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">
                 Longest winning run
               </p>
-              <p className="record-display-font text-sm sm:text-base">
-                {longestWinningRun} {longestWinningRun === 1 ? 'game' : 'games'}
+              <p
+                className="record-display-font rounded-sm border border-ink px-3 py-1.5 text-sm text-white sm:text-base"
+                style={{ background: resultToneStyles.win.background }}
+              >
+                {longestWinningRun.total}
               </p>
             </div>
           </div>
@@ -1846,6 +1853,41 @@ function FormTicker({
           </p>
         </div>
       </div>
+    </div>
+  )
+}
+
+function StreakRunBox({
+  label,
+  stats,
+  showBreakdown = false,
+  bordered = false,
+}: {
+  label: string
+  stats: StreakRunStats
+  showBreakdown?: boolean
+  bordered?: boolean
+}) {
+  return (
+    <div className={bordered ? 'border-t border-ink' : undefined}>
+      <div
+        className="flex items-center justify-between gap-3 px-4 py-3"
+        style={{ background: winDrawGradient(stats.wins, stats.draws) }}
+      >
+        <p className="record-display-font text-[10px] uppercase text-white/90 sm:text-xs">{label}</p>
+        <p className="record-display-font text-lg text-white sm:text-xl">{stats.total}</p>
+      </div>
+      {showBreakdown && stats.total > 0 ? (
+        <div className="flex items-center justify-end gap-2 border-t border-ink bg-soft/40 px-4 py-2">
+          <span className="number text-xs font-semibold" style={{ color: resultColors.W }}>
+            {stats.wins}W
+          </span>
+          <span className="text-xs text-muted">·</span>
+          <span className="number text-xs font-semibold" style={{ color: resultColors.D }}>
+            {stats.draws}D
+          </span>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -361,15 +361,52 @@ export const getSeasonRecord = (matches: Match[]) => {
 
 export const getTrackerRecord = (matches: Match[]) => getMatchRecord(matches)
 
-export const getCurrentUnbeatenStreak = (matches: Match[]): number => {
-  let streak = 0
+export type StreakRunStats = {
+  total: number
+  wins: number
+  draws: number
+}
+
+export const getCurrentUnbeatenStreak = (matches: Match[]): StreakRunStats => {
+  let wins = 0
+  let draws = 0
 
   for (const match of getFormTickerMatches(matches)) {
     if (match.result === 'L') break
-    streak += 1
+    if (match.result === 'W') wins += 1
+    else if (match.result === 'D') draws += 1
   }
 
-  return streak
+  return { total: wins + draws, wins, draws }
+}
+
+const getLongestUnbeatenRunStats = (matches: Match[]): StreakRunStats => {
+  const chronological = [...getFormTickerMatches(matches)].reverse()
+  let currentWins = 0
+  let currentDraws = 0
+  let longest: StreakRunStats = { total: 0, wins: 0, draws: 0 }
+
+  const commitCurrentRun = () => {
+    const total = currentWins + currentDraws
+    if (total > longest.total) {
+      longest = { total, wins: currentWins, draws: currentDraws }
+    }
+    currentWins = 0
+    currentDraws = 0
+  }
+
+  for (const match of chronological) {
+    if (match.result === 'L') {
+      commitCurrentRun()
+      continue
+    }
+
+    if (match.result === 'W') currentWins += 1
+    else if (match.result === 'D') currentDraws += 1
+  }
+
+  commitCurrentRun()
+  return longest
 }
 
 const getLongestResultRun = (
@@ -392,11 +429,13 @@ const getLongestResultRun = (
   return longest
 }
 
-export const getLongestUnbeatenRun = (matches: Match[]) =>
-  getLongestResultRun(matches, (result) => result !== 'L')
+export const getLongestUnbeatenRun = (matches: Match[]): StreakRunStats =>
+  getLongestUnbeatenRunStats(matches)
 
-export const getLongestWinningRun = (matches: Match[]) =>
-  getLongestResultRun(matches, (result) => result === 'W')
+export const getLongestWinningRun = (matches: Match[]): StreakRunStats => {
+  const wins = getLongestResultRun(matches, (result) => result === 'W')
+  return { total: wins, wins, draws: 0 }
+}
 
 export const getOpponentXg = (match: Match): number | null => {
   const explicit = match.opponentStats?.xG

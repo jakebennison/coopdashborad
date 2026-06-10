@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createUpdateNoteRemote, deleteUpdateNoteRemote, fetchUpdateNotes } from './updatesApi'
 import type { UpdateNote } from './types'
 
@@ -12,7 +12,7 @@ const primaryButtonClass = 'btn-primary px-5 py-3'
 const dateToInputValue = (date: Date) => date.toISOString().slice(0, 10)
 
 const formatUpdateDate = (value: string) => {
-  const date = new Date(value)
+  const date = new Date(`${value.slice(0, 10)}T12:00:00`)
   if (Number.isNaN(date.getTime())) return value
 
   return date.toLocaleDateString(undefined, {
@@ -20,6 +20,29 @@ const formatUpdateDate = (value: string) => {
     month: 'short',
     year: 'numeric',
   })
+}
+
+type UpdateDateGroup = {
+  date: string
+  updates: UpdateNote[]
+}
+
+const groupUpdatesByDate = (updates: UpdateNote[]): UpdateDateGroup[] => {
+  const groups = new Map<string, UpdateNote[]>()
+
+  for (const update of updates) {
+    const dateKey = update.date.slice(0, 10)
+    const existing = groups.get(dateKey) ?? []
+    existing.push(update)
+    groups.set(dateKey, existing)
+  }
+
+  return [...groups.entries()]
+    .sort(([leftDate], [rightDate]) => rightDate.localeCompare(leftDate))
+    .map(([date, dateUpdates]) => ({
+      date,
+      updates: [...dateUpdates].sort((left, right) => right.id - left.id),
+    }))
 }
 
 export default function UpdateTimeline() {
@@ -32,6 +55,7 @@ export default function UpdateTimeline() {
   const [date, setDate] = useState(dateToInputValue(new Date()))
   const [body, setBody] = useState('')
   const [saving, setSaving] = useState(false)
+  const groupedUpdates = useMemo(() => groupUpdatesByDate(updates), [updates])
 
   const loadUpdates = async () => {
     setLoading(true)
@@ -107,7 +131,7 @@ export default function UpdateTimeline() {
             <p className="record-display-font text-xs font-bold uppercase text-muted">Changelog</p>
             <h2 className={`${headingClass} mt-1`}>Tool updates</h2>
             <p className="mt-2 max-w-2xl text-sm text-muted">
-              A shared timeline of dashboard changes. Tap an entry to read what was updated.
+              A shared timeline of dashboard changes, grouped by date. Tap an update to read the full notes.
             </p>
           </div>
           <button
@@ -174,50 +198,55 @@ export default function UpdateTimeline() {
           <p className="text-sm text-muted">Loading updates…</p>
         ) : updates.length ? (
           <ol className="relative ml-3 border-l border-ink/20 pl-8">
-            {updates.map((update, index) => {
-              const expanded = expandedId === update.id
+            {groupedUpdates.map((group, groupIndex) => (
+              <li key={group.date} className={`relative ${groupIndex === 0 ? '' : 'mt-10'}`}>
+                <span
+                  className="absolute -left-[2.05rem] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-ink bg-[var(--color-ink)]"
+                  aria-hidden
+                />
+                <p className="record-display-font text-sm font-bold uppercase text-ink sm:text-base">
+                  {formatUpdateDate(group.date)}
+                </p>
+                <ul className="mt-4 space-y-3">
+                  {group.updates.map((update) => {
+                    const expanded = expandedId === update.id
 
-              return (
-                <li key={update.id} className={`relative ${index === 0 ? '' : 'mt-8'}`}>
-                  <span
-                    className={`absolute -left-[2.05rem] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-ink bg-card ${
-                      expanded ? 'bg-[var(--color-ink)]' : ''
-                    }`}
-                    aria-hidden
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setExpandedId(expanded ? null : update.id)}
-                    className="w-full text-left"
-                    aria-expanded={expanded}
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                          {formatUpdateDate(update.date)}
-                        </p>
-                        <h3 className="record-display-font mt-1 text-lg font-bold text-ink sm:text-xl">
-                          {update.title}
-                        </h3>
-                      </div>
-                      <span className="text-sm text-muted">{expanded ? '▲' : '▼'}</span>
-                    </div>
-                  </button>
-                  {expanded ? (
-                    <div className="mt-4 rounded-xl border border-ink bg-soft px-4 py-4">
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">{update.body}</p>
-                      <button
-                        type="button"
-                        onClick={() => void removeUpdate(update.id)}
-                        className="mt-4 text-xs font-semibold text-[#EE5D50] transition hover:underline"
+                    return (
+                      <li
+                        key={update.id}
+                        className="overflow-hidden rounded-xl border border-ink bg-card"
                       >
-                        Delete entry
-                      </button>
-                    </div>
-                  ) : null}
-                </li>
-              )
-            })}
+                        <button
+                          type="button"
+                          onClick={() => setExpandedId(expanded ? null : update.id)}
+                          className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left transition hover:bg-soft"
+                          aria-expanded={expanded}
+                        >
+                          <h3 className="record-display-font text-base font-bold text-ink sm:text-lg">
+                            {update.title}
+                          </h3>
+                          <span className="shrink-0 text-sm text-muted">{expanded ? '▲' : '▼'}</span>
+                        </button>
+                        {expanded ? (
+                          <div className="border-t border-ink bg-soft px-4 py-4">
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink">
+                              {update.body}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => void removeUpdate(update.id)}
+                              className="mt-4 text-xs font-semibold text-[#EE5D50] transition hover:underline"
+                            >
+                              Delete entry
+                            </button>
+                          </div>
+                        ) : null}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </li>
+            ))}
           </ol>
         ) : (
           <div className="rounded-2xl border border-dashed border-ink px-6 py-10 text-center">
