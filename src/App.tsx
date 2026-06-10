@@ -269,9 +269,16 @@ function App() {
               : 'Match detail'
 
   return (
-    <div className="min-h-screen bg-page text-ink">
+    <div
+      className={`min-h-screen ${showWelcomeIntro ? 'overflow-hidden bg-[#101010]' : 'bg-page text-ink'}`}
+    >
       {showWelcomeIntro ? <WelcomeIntro onComplete={() => setShowWelcomeIntro(false)} /> : null}
-      <div className="mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row">
+      <div
+        className={`mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row ${
+          showWelcomeIntro ? 'invisible' : ''
+        }`}
+        aria-hidden={showWelcomeIntro}
+      >
         <aside className="card m-4 flex shrink-0 flex-col gap-8 p-5 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:self-start">
           <button type="button" className="text-left" onClick={() => setView('dashboard')}>
             <div className="flex items-center gap-3">

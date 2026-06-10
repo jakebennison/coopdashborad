@@ -10,6 +10,13 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      try {
+        if (localStorage.getItem('coop26-welcome-intro-seen') !== '1') {
+          document.documentElement.style.background = '#101010'
+        }
+      } catch (_) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
