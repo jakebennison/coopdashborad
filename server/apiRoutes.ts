@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { readApiEnv } from './env'
 import { handleExtractMatchRequest } from './extractMatch'
+import { handleMatchesRequest } from './matchesApi'
 import { handleXboxExtractMatchRequest, handleXboxScreenshotsRequest } from './xboxScreenshots'
 
 const sendUnhandledError = (res: ServerResponse) => {
@@ -30,6 +31,8 @@ export const handleApiRequest = async (
   res: ServerResponse,
   pathname: string,
 ): Promise<boolean> => {
+  if (await handleMatchesRequest(req, res, pathname)) return true
+
   const env = readApiEnv()
 
   if (pathname === '/api/extract-match' && req.method === 'POST') {

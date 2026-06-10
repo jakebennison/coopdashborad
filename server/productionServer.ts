@@ -5,6 +5,7 @@ import path from 'node:path'
 import { handleApiRequest } from './apiRoutes'
 import { loadLocalEnvFile } from './env'
 import { configureHttpTimeouts } from './httpTimeouts'
+import { ensureMatchesStore } from './matchesStore'
 
 loadLocalEnvFile()
 
@@ -79,9 +80,16 @@ const server = createServer((req, res) => {
 
 configureHttpTimeouts(server)
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Production server listening on 0.0.0.0:${PORT}`)
-})
+void ensureMatchesStore()
+  .then(() => {
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`Production server listening on 0.0.0.0:${PORT}`)
+    })
+  })
+  .catch((error) => {
+    console.error('[matches] Failed to initialize storage:', error)
+    process.exit(1)
+  })
 
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason)

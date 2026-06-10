@@ -2,6 +2,7 @@ import type { Connect } from 'vite'
 import type { Plugin } from 'vite'
 import { handleApiRequest } from './apiRoutes'
 import { configureHttpTimeouts } from './httpTimeouts'
+import { ensureMatchesStore } from './matchesStore'
 
 export type { ApiEnv } from './env'
 
@@ -26,10 +27,12 @@ export function apiPlugin(): Plugin {
   return {
     name: 'extract-match-api',
     configureServer(server) {
+      void ensureMatchesStore()
       configureHttpTimeouts(server.httpServer)
       attachApi(server.middlewares)
     },
     configurePreviewServer(server) {
+      void ensureMatchesStore()
       configureHttpTimeouts(server.httpServer)
       attachApi(server.middlewares)
     },

@@ -30,17 +30,22 @@ import {
   isManualFormMatch,
   isStatsMatch,
   normaliseTeamName,
-  readMatches,
   sortMatchesNewestFirst,
   statFields,
   toMatch,
   updateMatchComments,
-  writeMatches,
   type ExtractionDraftOptions,
   type ManualFormDraft,
 } from './matchUtils'
 import { fileDateToInputValue } from './statParsing'
 import DetailedStats from './DetailedStats'
+import {
+  createMatchRemote,
+  deleteAllMatchesRemote,
+  deleteMatchRemote,
+  fetchMatches,
+  updateMatchRemote,
+} from './matchesApi'
 import OverallRecordDisplay, { AnimatedCountUp } from './OverallRecordDisplay'
 import { applyTheme, getThemeColors, readTheme, type Theme } from './theme'
 
@@ -104,14 +109,35 @@ const tabActiveClass = 'btn-tab-active px-4 py-2 text-sm font-semibold'
 const tabInactiveClass = 'btn-tab-inactive px-4 py-2 text-sm font-semibold'
 
 function App() {
-  const [matches, setMatches] = useState<Match[]>(() => readMatches())
+  const [matches, setMatches] = useState<Match[]>([])
+  const [matchesLoading, setMatchesLoading] = useState(true)
+  const [matchesError, setMatchesError] = useState<string | null>(null)
   const [view, setView] = useState<View>('dashboard')
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null)
   const [theme, setTheme] = useState<Theme>(() => readTheme())
 
   useEffect(() => {
-    writeMatches(matches)
-  }, [matches])
+    let cancelled = false
+
+    setMatchesLoading(true)
+    fetchMatches()
+      .then((loaded) => {
+        if (cancelled) return
+        setMatches(loaded)
+        setMatchesError(null)
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setMatchesError(error instanceof Error ? error.message : 'Could not load matches.')
+      })
+      .finally(() => {
+        if (!cancelled) setMatchesLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     applyTheme(theme)
@@ -122,16 +148,30 @@ function App() {
     [matches, selectedMatchId],
   )
 
-  const saveDraft = (draft: DraftMatch) => {
+  const saveDraft = async (draft: DraftMatch) => {
     const match = toMatch(draft)
-    setMatches((current) => sortMatchesNewestFirst([match, ...current]))
-    setSelectedMatchId(null)
-    setView('dashboard')
+
+    try {
+      await createMatchRemote(match)
+      setMatches((current) => sortMatchesNewestFirst([match, ...current]))
+      setMatchesError(null)
+      setSelectedMatchId(null)
+      setView('dashboard')
+    } catch (error) {
+      setMatchesError(error instanceof Error ? error.message : 'Could not save match.')
+    }
   }
 
-  const saveManualFormEntry = (draft: ManualFormDraft) => {
+  const saveManualFormEntry = async (draft: ManualFormDraft) => {
     const match = createManualFormMatch(draft)
-    setMatches((current) => sortMatchesNewestFirst([match, ...current]))
+
+    try {
+      await createMatchRemote(match)
+      setMatches((current) => sortMatchesNewestFirst([match, ...current]))
+      setMatchesError(null)
+    } catch (error) {
+      setMatchesError(error instanceof Error ? error.message : 'Could not save match.')
+    }
   }
 
   const openMatch = (match: Match) => {
@@ -139,22 +179,50 @@ function App() {
     setView('detail')
   }
 
-  const removeMatch = (id: number) => {
-    setMatches((current) => deleteMatchById(current, id))
-    if (selectedMatchId === id) {
-      setSelectedMatchId(null)
-      setView('dashboard')
+  const removeMatch = async (id: number) => {
+    try {
+      await deleteMatchRemote(id)
+      setMatches((current) => deleteMatchById(current, id))
+      setMatchesError(null)
+      if (selectedMatchId === id) {
+        setSelectedMatchId(null)
+        setView('dashboard')
+      }
+    } catch (error) {
+      setMatchesError(error instanceof Error ? error.message : 'Could not delete match.')
     }
   }
 
-  const resetAllMatches = () => {
-    setMatches(clearAllMatches())
-    setSelectedMatchId(null)
-    setView('dashboard')
+  const resetAllMatches = async () => {
+    try {
+      await deleteAllMatchesRemote()
+      setMatches(clearAllMatches())
+      setMatchesError(null)
+      setSelectedMatchId(null)
+      setView('dashboard')
+    } catch (error) {
+      setMatchesError(error instanceof Error ? error.message : 'Could not clear matches.')
+    }
   }
 
-  const saveMatchComments = (id: number, comments: Match['comments']) => {
-    setMatches((current) => updateMatchComments(current, id, comments ?? []))
+  const saveMatchComments = async (id: number, comments: Match['comments']) => {
+    const nextMatches = updateMatchComments(matches, id, comments ?? [])
+    const updated = nextMatches.find((match) => match.id === id)
+    if (!updated) return
+
+    setMatches(nextMatches)
+
+    try {
+      await updateMatchRemote(updated)
+      setMatchesError(null)
+    } catch (error) {
+      setMatchesError(error instanceof Error ? error.message : 'Could not save comments.')
+      try {
+        setMatches(await fetchMatches())
+      } catch {
+        // Keep optimistic state if refresh also fails.
+      }
+    }
   }
 
   const pageTitle =
@@ -237,7 +305,19 @@ function App() {
             )}
           </header>
 
-          {view === 'dashboard' && (
+          {matchesError ? (
+            <div className="rounded-2xl border border-ink bg-danger px-4 py-3 text-sm font-medium text-[#EE5D50]">
+              {matchesError}
+            </div>
+          ) : null}
+
+          {matchesLoading ? (
+            <div className={`${panelClass} px-6 py-10 text-center text-sm font-medium text-muted`}>
+              Loading shared match data…
+            </div>
+          ) : null}
+
+          {!matchesLoading && view === 'dashboard' && (
             <Dashboard
               matches={matches}
               theme={theme}
@@ -246,7 +326,7 @@ function App() {
               onAddManualFormEntry={saveManualFormEntry}
             />
           )}
-          {view === 'stats' && (
+          {!matchesLoading && view === 'stats' && (
             <DetailedStats
               matches={matches.filter(isStatsMatch)}
               theme={theme}
