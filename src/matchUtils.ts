@@ -372,6 +372,32 @@ export const getCurrentUnbeatenStreak = (matches: Match[]): number => {
   return streak
 }
 
+const getLongestResultRun = (
+  matches: Match[],
+  countsTowardRun: (result: Result) => boolean,
+): number => {
+  const chronological = [...getFormTickerMatches(matches)].reverse()
+  let current = 0
+  let longest = 0
+
+  for (const match of chronological) {
+    if (countsTowardRun(match.result)) {
+      current += 1
+      longest = Math.max(longest, current)
+    } else {
+      current = 0
+    }
+  }
+
+  return longest
+}
+
+export const getLongestUnbeatenRun = (matches: Match[]) =>
+  getLongestResultRun(matches, (result) => result !== 'L')
+
+export const getLongestWinningRun = (matches: Match[]) =>
+  getLongestResultRun(matches, (result) => result === 'W')
+
 export const getOpponentXg = (match: Match): number | null => {
   const explicit = match.opponentStats?.xG
   return typeof explicit === 'number' ? explicit : null

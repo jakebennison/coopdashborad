@@ -20,6 +20,8 @@ import {
   extractionToDraft,
   formatStatValue,
   getCurrentUnbeatenStreak,
+  getLongestUnbeatenRun,
+  getLongestWinningRun,
   createManualFormMatch,
   getFormTickerMatches,
   getImportedXboxContentIds,
@@ -466,6 +468,8 @@ function Dashboard({
   const avgXg = average(statsMatches.map((match) => match.stats?.xG ?? null))
   const xgRecord = useMemo(() => getXgRecord(statsMatches), [statsMatches])
   const unbeatenStreak = useMemo(() => getCurrentUnbeatenStreak(matches), [matches])
+  const longestUnbeatenRun = useMemo(() => getLongestUnbeatenRun(matches), [matches])
+  const longestWinningRun = useMemo(() => getLongestWinningRun(matches), [matches])
   const trackerRecord = useMemo(() => getTrackerRecord(matches), [matches])
   const [hoveredGoalIndex, setHoveredGoalIndex] = useState<number | null>(null)
   const hoveredGoalPoint = hoveredGoalIndex != null ? (chartData[hoveredGoalIndex] ?? null) : null
@@ -506,6 +510,8 @@ function Dashboard({
         <FormTicker
           matches={formMatches}
           unbeatenStreak={unbeatenStreak}
+          longestUnbeatenRun={longestUnbeatenRun}
+          longestWinningRun={longestWinningRun}
           trackerRecord={trackerRecord}
           onAddManualEntry={onAddManualFormEntry}
         />
@@ -1632,17 +1638,22 @@ function MatchDetail({
 function FormTicker({
   matches,
   unbeatenStreak,
+  longestUnbeatenRun,
+  longestWinningRun,
   trackerRecord,
   onAddManualEntry,
 }: {
   matches: Match[]
   unbeatenStreak: number
+  longestUnbeatenRun: number
+  longestWinningRun: number
   trackerRecord: { W: number; D: number; L: number }
   onAddManualEntry: (draft: ManualFormDraft) => void
 }) {
   const pageSize = 20
   const carouselRef = useRef<HTMLDivElement>(null)
   const touchStartX = useRef<number | null>(null)
+  const [recordsOpen, setRecordsOpen] = useState(false)
   const pages = useMemo(() => {
     const result: Match[][] = []
 
@@ -1786,6 +1797,35 @@ function FormTicker({
             {unbeatenStreak} {unbeatenStreak === 1 ? 'game' : 'games'}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setRecordsOpen((open) => !open)}
+          className="flex w-full items-center justify-between gap-3 border-t border-ink px-4 py-2.5 text-left transition hover:bg-soft"
+          aria-expanded={recordsOpen}
+        >
+          <span className="record-display-font text-[10px] uppercase text-muted sm:text-xs">Records</span>
+          <span className="text-xs font-semibold text-muted">{recordsOpen ? '▲' : '▼'}</span>
+        </button>
+        {recordsOpen ? (
+          <div className="border-t border-ink bg-soft/40">
+            <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">
+                Longest unbeaten run
+              </p>
+              <p className="record-display-font text-sm sm:text-base">
+                {longestUnbeatenRun} {longestUnbeatenRun === 1 ? 'game' : 'games'}
+              </p>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-ink px-4 py-2.5">
+              <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">
+                Longest winning run
+              </p>
+              <p className="record-display-font text-sm sm:text-base">
+                {longestWinningRun} {longestWinningRun === 1 ? 'game' : 'games'}
+              </p>
+            </div>
+          </div>
+        ) : null}
         <div className="flex items-center justify-between gap-3 border-t border-ink px-4 py-2.5">
           <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">
             Since tracker started
