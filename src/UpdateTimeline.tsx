@@ -50,6 +50,7 @@ export default function UpdateTimeline() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<number | null>(null)
+  const [expandedDates, setExpandedDates] = useState<Set<string>>(() => new Set())
   const [showForm, setShowForm] = useState(false)
   const [title, setTitle] = useState('')
   const [date, setDate] = useState(dateToInputValue(new Date()))
@@ -103,6 +104,7 @@ export default function UpdateTimeline() {
         createdAt: new Date().toISOString(),
       })
       setUpdates((current) => [saved, ...current.filter((entry) => entry.id !== saved.id)])
+      setExpandedDates((current) => new Set(current).add(saved.date.slice(0, 10)))
       setExpandedId(saved.id)
       closeForm()
     } catch (caught) {
@@ -110,6 +112,15 @@ export default function UpdateTimeline() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const toggleDateGroup = (dateKey: string) => {
+    setExpandedDates((current) => {
+      const next = new Set(current)
+      if (next.has(dateKey)) next.delete(dateKey)
+      else next.add(dateKey)
+      return next
+    })
   }
 
   const removeUpdate = async (id: number) => {
@@ -131,7 +142,7 @@ export default function UpdateTimeline() {
             <p className="record-display-font text-xs font-bold uppercase text-muted">Changelog</p>
             <h2 className={`${headingClass} mt-1`}>Tool updates</h2>
             <p className="mt-2 max-w-2xl text-sm text-muted">
-              A shared timeline of dashboard changes, grouped by date. Tap an update to read the full notes.
+              A shared timeline of dashboard changes, grouped by date. Tap a date to expand its updates.
             </p>
           </div>
           <button
@@ -198,15 +209,29 @@ export default function UpdateTimeline() {
           <p className="text-sm text-muted">Loading updates…</p>
         ) : updates.length ? (
           <ol className="relative ml-3 border-l border-ink/20 pl-8">
-            {groupedUpdates.map((group, groupIndex) => (
+            {groupedUpdates.map((group, groupIndex) => {
+              const dateExpanded = expandedDates.has(group.date)
+
+              return (
               <li key={group.date} className={`relative ${groupIndex === 0 ? '' : 'mt-10'}`}>
                 <span
                   className="absolute -left-[2.05rem] top-1.5 h-3.5 w-3.5 rounded-full border-2 border-ink bg-[var(--color-ink)]"
                   aria-hidden
                 />
-                <p className="record-display-font text-sm font-bold uppercase text-ink sm:text-base">
-                  {formatUpdateDate(group.date)}
-                </p>
+                <button
+                  type="button"
+                  onClick={() => toggleDateGroup(group.date)}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg text-left transition hover:bg-soft"
+                  aria-expanded={dateExpanded}
+                >
+                  <p className="record-display-font text-sm font-bold uppercase text-ink sm:text-base">
+                    {formatUpdateDate(group.date)}
+                  </p>
+                  <span className="shrink-0 text-xs font-semibold text-muted">
+                    {group.updates.length} update{group.updates.length === 1 ? '' : 's'} {dateExpanded ? '▲' : '▼'}
+                  </span>
+                </button>
+                {dateExpanded ? (
                 <ul className="mt-4 space-y-3">
                   {group.updates.map((update) => {
                     const expanded = expandedId === update.id
@@ -245,8 +270,10 @@ export default function UpdateTimeline() {
                     )
                   })}
                 </ul>
+                ) : null}
               </li>
-            ))}
+              )
+            })}
           </ol>
         ) : (
           <div className="rounded-2xl border border-dashed border-ink px-6 py-10 text-center">
