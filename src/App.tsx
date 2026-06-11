@@ -510,34 +510,34 @@ function Dashboard({
           <div className="min-w-0 shrink-0">
             <OverallRecordDisplay wins={record.W} draws={record.D} losses={record.L} />
           </div>
-          <div className="grid w-full max-w-[11.5rem] shrink-0 grid-rows-3 gap-3 xl:w-[11.5rem]">
-            <div className={`${innerBoxClass} flex min-h-[5.5rem] flex-col justify-center px-4 py-3`}>
-              <p className="record-display-font text-xs font-bold uppercase">Win rate</p>
+          <div className="grid w-full max-w-[9.5rem] shrink-0 grid-rows-3 gap-2 xl:w-[9.5rem] xl:self-end">
+            <div className={`${innerBoxClass} flex flex-col justify-center px-3 py-2`}>
+              <p className="record-display-font text-[10px] font-bold uppercase leading-tight">Win rate</p>
               <AnimatedCountUp
                 value={winRate}
                 color={winRateColor(winRate)}
                 suffix="%"
                 delayMs={500}
-                className="mt-1 text-2xl sm:text-3xl"
+                className="mt-0.5 text-lg sm:text-xl"
               />
             </div>
-            <div className={`${innerBoxClass} flex min-h-[5.5rem] flex-col justify-center px-4 py-3`}>
-              <p className="record-display-font text-xs font-bold uppercase">Matches played</p>
+            <div className={`${innerBoxClass} flex flex-col justify-center px-3 py-2`}>
+              <p className="record-display-font text-[10px] font-bold uppercase leading-tight">Matches played</p>
               <AnimatedCountUp
                 value={total}
                 color="var(--color-ink)"
                 delayMs={640}
-                className="mt-1 text-2xl sm:text-3xl"
+                className="mt-0.5 text-lg sm:text-xl"
               />
             </div>
-            <div className={`${innerBoxClass} flex min-h-[5.5rem] flex-col justify-center px-4 py-3`}>
-              <p className="record-display-font text-xs font-bold uppercase">W/L Ratio</p>
+            <div className={`${innerBoxClass} flex flex-col justify-center px-3 py-2`}>
+              <p className="record-display-font text-[10px] font-bold uppercase leading-tight">W/L Ratio</p>
               <AnimatedCountUp
                 value={wlRatio}
                 color={wlRatioColor}
                 signed
                 delayMs={780}
-                className="mt-1 text-2xl sm:text-3xl"
+                className="mt-0.5 text-lg sm:text-xl"
               />
             </div>
           </div>
