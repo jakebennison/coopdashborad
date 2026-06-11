@@ -537,7 +537,7 @@ function Dashboard({
             <RecordOdometerStack wins={record.W} draws={record.D} losses={record.L} />
           </div>
           <div
-            className="dashboard-record-metrics grid min-h-0 grid-rows-3 gap-2"
+            className="dashboard-record-metrics grid min-h-0 grid-rows-3 gap-2.5"
             style={metricsHeight ? { height: metricsHeight } : undefined}
           >
             <DashboardMetricBox label="Win rate">
