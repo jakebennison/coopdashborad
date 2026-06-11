@@ -347,7 +347,11 @@ textarea {
   font-weight: 700;
   line-height: 1;
   color: #ffffff;
-  opacity: 0.24;
+  opacity: 0;
+  transform: scale(0.86) translateY(8px);
+  animation: welcome-form-letter-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(180ms + min(var(--letter-index, 0), 36) * 48ms);
+  will-change: opacity, transform;
 }
 
 .welcome-intro--exit {
@@ -535,6 +539,18 @@ textarea {
   }
 }
 
+@keyframes welcome-form-letter-in {
+  from {
+    opacity: 0;
+    transform: scale(0.86) translateY(8px);
+  }
+
+  to {
+    opacity: 0.24;
+    transform: scale(1) translateY(0);
+  }
+}
+
 @keyframes welcome-progress-fill {
   from {
     width: 0;
@@ -548,7 +564,13 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .welcome-intro--exit,
   .welcome-intro__content,
-  .welcome-intro__progress-fill--run {
+  .welcome-intro__progress-fill--run,
+  .welcome-intro__form-letter {
     animation: none;
+  }
+
+  .welcome-intro__form-letter {
+    opacity: 0.24;
+    transform: none;
   }
 }

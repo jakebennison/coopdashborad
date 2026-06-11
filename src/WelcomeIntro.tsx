@@ -72,9 +72,12 @@ export default function WelcomeIntro({ formMatches, onComplete }: WelcomeIntroPr
 
           return (
             <span
-              key={`${match.id}-${index}`}
+              key={match.id}
               className="record-display-font welcome-intro__form-letter"
-              style={{ background: resultToneStyles[tone].background }}
+              style={{
+                background: resultToneStyles[tone].background,
+                ['--letter-index' as string]: index,
+              }}
             >
               {match.result}
             </span>
