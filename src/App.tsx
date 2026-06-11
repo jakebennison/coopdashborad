@@ -1879,6 +1879,7 @@ function FormTicker({
           <div className="border-t border-ink">
             <StreakRunBox
               label="Longest unbeaten run"
+              club="PSG"
               stats={longestUnbeatenRun}
               showBreakdown
               bordered
@@ -1912,11 +1913,13 @@ function FormTicker({
 
 function StreakRunBox({
   label,
+  club,
   stats,
   showBreakdown = false,
   bordered = false,
 }: {
   label: string
+  club?: string
   stats: StreakRunStats
   showBreakdown?: boolean
   bordered?: boolean
@@ -1924,7 +1927,10 @@ function StreakRunBox({
   return (
     <div className={bordered ? 'border-t border-ink' : undefined}>
       <div className="flex items-center justify-between gap-3 px-4 py-2.5">
-        <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">{label}</p>
+        <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">
+          {label}
+          {club ? <span className="text-ink"> · {club}</span> : null}
+        </p>
         <p className={streakRunBadgeClass} style={{ background: winDrawGradient(stats.wins, stats.draws) }}>
           {stats.total}
         </p>
