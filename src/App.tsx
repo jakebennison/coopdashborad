@@ -2008,6 +2008,9 @@ function RecordStreakCard({
     : stats.total === 1
       ? 'game'
       : 'games'
+  const badgeBackground = isWinRun
+    ? resultToneStyles.win.background
+    : winDrawGradient(stats.wins, stats.draws)
 
   return (
     <div className="rounded-xl border border-ink bg-card p-4">
@@ -2020,7 +2023,9 @@ function RecordStreakCard({
           {description ? <p className="mt-1 text-xs leading-relaxed text-muted">{description}</p> : null}
         </div>
         <div className="shrink-0 text-right">
-          <p className="number text-3xl font-bold leading-none text-ink">{stats.total}</p>
+          <p className={streakRunBadgeClass} style={{ background: badgeBackground }}>
+            {stats.total}
+          </p>
           <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-muted">{countLabel}</p>
         </div>
       </div>
