@@ -1874,28 +1874,51 @@ function FormTicker({
         <button
           type="button"
           onClick={() => setRecordsOpen((open) => !open)}
-          className="flex w-full items-center justify-between gap-3 border-t border-ink px-4 py-2.5 text-left transition hover:bg-soft"
+          className="flex w-full items-center justify-between gap-4 border-t border-ink px-4 py-3 text-left transition hover:bg-soft/70"
           aria-expanded={recordsOpen}
         >
-          <span className="record-display-font text-[10px] uppercase text-muted sm:text-xs">Records</span>
-          <span className="text-xs font-semibold text-muted">{recordsOpen ? '▲' : '▼'}</span>
+          <div className="min-w-0">
+            <p className="record-display-font text-xs font-bold uppercase text-ink sm:text-sm">Season records</p>
+            {recordsOpen ? (
+              <p className="mt-1 text-xs leading-relaxed text-muted">Longest unbeaten and winning runs this season</p>
+            ) : longestUnbeatenRun.total > 0 || longestWinningRun.total > 0 ? (
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                Unbeaten{' '}
+                <span className="number font-semibold text-ink">{longestUnbeatenRun.total}</span>
+                <span className="px-1 text-muted/70">·</span>
+                Wins{' '}
+                <span className="number font-semibold text-ink">{longestWinningRun.total}</span>
+                <span className="hidden sm:inline"> · Tap to expand</span>
+              </p>
+            ) : (
+              <p className="mt-1 text-xs leading-relaxed text-muted">Tap to view longest runs</p>
+            )}
+          </div>
+          <span
+            className={`record-display-font shrink-0 text-sm text-muted transition-transform duration-200 ${
+              recordsOpen ? 'rotate-180' : ''
+            }`}
+            aria-hidden
+          >
+            ▼
+          </span>
         </button>
         {recordsOpen ? (
-          <div className="border-t border-ink">
-            <StreakRunBox
-              label="Longest unbeaten run"
-              club="PSG"
-              stats={longestUnbeatenRun}
-              showBreakdown
-              bordered
-            />
-            <div className="flex items-center justify-between gap-3 border-t border-ink px-4 py-2.5">
-              <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">
-                Longest winning run
-              </p>
-              <p className={streakRunBadgeClass} style={{ background: resultToneStyles.win.background }}>
-                {longestWinningRun.total}
-              </p>
+          <div className="border-t border-ink bg-soft/45 px-3 py-3 sm:px-4 sm:py-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <RecordStreakCard
+                label="Longest unbeaten run"
+                club="PSG"
+                description="Most consecutive games without a loss"
+                stats={longestUnbeatenRun}
+                showBreakdown
+              />
+              <RecordStreakCard
+                label="Longest winning run"
+                description="Most consecutive wins"
+                stats={longestWinningRun}
+                solidWin
+              />
             </div>
           </div>
         ) : null}
@@ -1953,6 +1976,72 @@ function StreakRunBox({
             </span>
           </div>
         </div>
+      ) : null}
+    </div>
+  )
+}
+
+function RecordStreakCard({
+  label,
+  club,
+  description,
+  stats,
+  showBreakdown = false,
+  solidWin = false,
+}: {
+  label: string
+  club?: string
+  description?: string
+  stats: StreakRunStats
+  showBreakdown?: boolean
+  solidWin?: boolean
+}) {
+  const badgeBackground = solidWin ? resultToneStyles.win.background : winDrawGradient(stats.wins, stats.draws)
+  const countLabel = solidWin ? (stats.total === 1 ? 'win' : 'wins') : stats.total === 1 ? 'game' : 'games'
+
+  return (
+    <div className="rounded-xl border border-ink bg-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="record-display-font text-[11px] font-bold uppercase tracking-wide text-muted sm:text-xs">
+            {label}
+            {club ? <span className="text-ink"> · {club}</span> : null}
+          </p>
+          {description ? <p className="mt-1 text-xs leading-relaxed text-muted">{description}</p> : null}
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="number text-3xl font-bold leading-none text-ink">{stats.total}</p>
+          <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-muted">{countLabel}</p>
+        </div>
+      </div>
+
+      {showBreakdown && stats.total > 0 ? (
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-ink/70 pt-3">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">Made up of</span>
+          <span
+            className="rounded-full px-2.5 py-1 text-xs font-semibold"
+            style={{ color: resultColors.W, backgroundColor: 'rgba(5, 205, 153, 0.12)' }}
+          >
+            {stats.wins}W
+          </span>
+          <span
+            className="rounded-full px-2.5 py-1 text-xs font-semibold"
+            style={{ color: resultColors.D, backgroundColor: 'rgba(255, 181, 71, 0.14)' }}
+          >
+            {stats.draws}D
+          </span>
+        </div>
+      ) : solidWin && stats.total > 0 ? (
+        <div className="mt-4 border-t border-ink/70 pt-3">
+          <span
+            className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold text-white"
+            style={{ background: badgeBackground }}
+          >
+            All wins
+          </span>
+        </div>
+      ) : stats.total === 0 ? (
+        <p className="mt-4 border-t border-ink/70 pt-3 text-xs text-muted">No run logged yet</p>
       ) : null}
     </div>
   )
