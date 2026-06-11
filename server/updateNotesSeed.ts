@@ -4,6 +4,49 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061114,
+    date: '2026-06-11',
+    title: 'Longest winning run goals',
+    body: `Season records now show how prolific the best winning streak was.
+
+• Scored and conceded totals for the longest consecutive win run
+• Calculated from the actual matches in that streak
+• Replaces the previous All wins badge on the record card`,
+  },
+  {
+    id: 2026061113,
+    date: '2026-06-11',
+    title: 'Season records panel refresh',
+    body: `The collapsible records section under recent form is easier to read.
+
+• Renamed to Season records with a collapsed preview (Unbeaten X · Wins Y)
+• Expanded view uses card layout with large counts and clearer labels
+• Longest unbeaten run shows W/D breakdown pills and a PSG club label
+• Equal-length unbeaten runs tie-break by more wins in the run`,
+  },
+  {
+    id: 2026061112,
+    date: '2026-06-11',
+    title: 'Streaks tab in stat analysis',
+    body: `New Streaks category in stat analysis for form runs across the season.
+
+• Current unbeaten and winning runs (always shown, even while building)
+• Longest unbeaten and winning records at a glance
+• Historical unbeaten runs of 5+ games with start/end dates and W/D breakdown
+• Winning streaks of 5+ wins, plus the active streak while it is growing
+• Uses all logged matches, not just screenshot stat entries`,
+  },
+  {
+    id: 2026061111,
+    date: '2026-06-11',
+    title: 'Dashboard record header alignment',
+    body: `Overall record, W/D/L stack, and headline metrics line up more cleanly.
+
+• Four-column header grid with even spacing
+• Win rate, matches played, and W/L Ratio align top-to-bottom with W, D, and L
+• Metric column height synced to the odometer display`,
+  },
+  {
     id: 2026061110,
     date: '2026-06-11',
     title: 'Dashboard W/L Ratio metric column',
