@@ -444,6 +444,149 @@ export const getLongestWinningRun = (matches: Match[]): StreakRunStats => {
   return { total: wins, wins, draws: 0 }
 }
 
+export const MIN_NOTABLE_STREAK_LENGTH = 5
+
+export type DatedStreakRun = StreakRunStats & {
+  startDate: string
+  endDate: string | null
+  isActive: boolean
+}
+
+export type DatedWinStreak = {
+  wins: number
+  startDate: string
+  endDate: string | null
+  isActive: boolean
+}
+
+export type StreakAnalysis = {
+  currentUnbeaten: StreakRunStats
+  currentWinning: StreakRunStats
+  longestUnbeaten: StreakRunStats
+  longestWinning: StreakRunStats
+  notableUnbeatenRuns: DatedStreakRun[]
+  notableWinStreaks: DatedWinStreak[]
+}
+
+export const getCurrentWinningStreak = (matches: Match[]): StreakRunStats => {
+  let wins = 0
+
+  for (const match of getFormTickerMatches(matches)) {
+    if (match.result !== 'W') break
+    wins += 1
+  }
+
+  return { total: wins, wins, draws: 0 }
+}
+
+const buildUnbeatenRuns = (matches: Match[]): DatedStreakRun[] => {
+  const chronological = [...getFormTickerMatches(matches)].reverse()
+  const runs: DatedStreakRun[] = []
+  let wins = 0
+  let draws = 0
+  let startDate: string | null = null
+  let runMatches: Match[] = []
+
+  const commitRun = (isActive: boolean) => {
+    const total = wins + draws
+    if (total === 0 || !startDate) return
+
+    runs.push({
+      total,
+      wins,
+      draws,
+      startDate,
+      endDate: isActive ? null : (runMatches[runMatches.length - 1]?.date ?? null),
+      isActive,
+    })
+    wins = 0
+    draws = 0
+    startDate = null
+    runMatches = []
+  }
+
+  for (const match of chronological) {
+    if (match.result === 'L') {
+      commitRun(false)
+      continue
+    }
+
+    if (!startDate) startDate = match.date
+    if (match.result === 'W') wins += 1
+    else if (match.result === 'D') draws += 1
+    runMatches.push(match)
+  }
+
+  commitRun(true)
+  return runs
+}
+
+const buildWinStreaks = (matches: Match[]): DatedWinStreak[] => {
+  const chronological = [...getFormTickerMatches(matches)].reverse()
+  const runs: DatedWinStreak[] = []
+  let wins = 0
+  let startDate: string | null = null
+  let runMatches: Match[] = []
+
+  const commitRun = (isActive: boolean) => {
+    if (wins === 0 || !startDate) return
+
+    runs.push({
+      wins,
+      startDate,
+      endDate: isActive ? null : (runMatches[runMatches.length - 1]?.date ?? null),
+      isActive,
+    })
+    wins = 0
+    startDate = null
+    runMatches = []
+  }
+
+  for (const match of chronological) {
+    if (match.result !== 'W') {
+      commitRun(false)
+      continue
+    }
+
+    if (!startDate) startDate = match.date
+    wins += 1
+    runMatches.push(match)
+  }
+
+  commitRun(true)
+  return runs
+}
+
+const sortUnbeatenRunsNewestFirst = (left: DatedStreakRun, right: DatedStreakRun) => {
+  if (left.isActive !== right.isActive) return left.isActive ? -1 : 1
+  return right.startDate.localeCompare(left.startDate) || right.total - left.total
+}
+
+const sortWinStreaksNewestFirst = (left: DatedWinStreak, right: DatedWinStreak) => {
+  if (left.isActive !== right.isActive) return left.isActive ? -1 : 1
+  return right.startDate.localeCompare(left.startDate) || right.wins - left.wins
+}
+
+export const getStreakAnalysis = (matches: Match[]): StreakAnalysis => {
+  const allUnbeatenRuns = buildUnbeatenRuns(matches)
+  const allWinStreaks = buildWinStreaks(matches)
+
+  return {
+    currentUnbeaten: getCurrentUnbeatenStreak(matches),
+    currentWinning: getCurrentWinningStreak(matches),
+    longestUnbeaten: getLongestUnbeatenRun(matches),
+    longestWinning: getLongestWinningRun(matches),
+    notableUnbeatenRuns: allUnbeatenRuns
+      .filter((run) => run.total >= MIN_NOTABLE_STREAK_LENGTH)
+      .sort(sortUnbeatenRunsNewestFirst),
+    notableWinStreaks: allWinStreaks
+      .filter(
+        (run) => run.wins >= MIN_NOTABLE_STREAK_LENGTH || (run.isActive && run.wins > 0),
+      )
+      .sort(sortWinStreaksNewestFirst),
+  }
+}
+
 export const getOpponentXg = (match: Match): number | null => {
   const explicit = match.opponentStats?.xG
   return typeof explicit === 'number' ? explicit : null

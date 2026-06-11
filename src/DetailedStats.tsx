@@ -30,6 +30,13 @@ import {
 import { statsCategories, type StatsCategory } from './statsCategories'
 import type { Match } from './types'
 import { getThemeColors, type Theme } from './theme'
+import {
+  getStreakAnalysis,
+  MIN_NOTABLE_STREAK_LENGTH,
+  type DatedStreakRun,
+  type DatedWinStreak,
+  type StreakRunStats,
+} from './matchUtils'
 
 const panelClass = 'card'
 const headingClass = 'record-display-font text-base font-bold uppercase sm:text-lg'
@@ -39,6 +46,43 @@ const tabInactiveClass = 'btn-tab-inactive px-4 py-2 text-sm font-semibold'
 
 const PSG_COLOR = '#05CD99'
 const OPP_COLOR = '#8F9BB3'
+const WIN_COLOR = '#05CD99'
+const DRAW_COLOR = '#FFB547'
+
+const streakWinBackground = 'linear-gradient(145deg, #06D6A0 0%, #05CD99 100%)'
+const streakDrawBackground = 'linear-gradient(145deg, #FFC766 0%, #FFB547 100%)'
+const streakRunBadgeClass =
+  'record-display-font shrink-0 rounded-sm border border-ink px-3 py-1.5 text-sm text-white sm:text-base'
+
+const winDrawGradient = (wins: number, draws: number) => {
+  const total = wins + draws
+  if (total <= 0) return 'linear-gradient(145deg, #E9EDF7 0%, #DDE3F0 100%)'
+  if (draws === 0) return streakWinBackground
+  if (wins === 0) return streakDrawBackground
+
+  const winShare = (wins / total) * 100
+  const feather = Math.min(30, Math.max(16, (100 / total) * 8))
+  const start = Math.max(0, winShare - feather)
+  const end = Math.min(100, winShare + feather)
+  const midBefore = Math.max(0, winShare - feather * 0.4)
+  const midAfter = Math.min(100, winShare + feather * 0.4)
+
+  return `linear-gradient(90deg, #06D6A0 0%, #05CD99 ${start}%, #8ADFC8 ${midBefore}%, #FFD08A ${midAfter}%, #FFB547 ${end}%, #FFB547 100%)`
+}
+
+const formatStreakDate = (date: string) =>
+  new Date(date).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+
+const formatStreakRange = (startDate: string, endDate: string | null, isActive: boolean) => {
+  const startLabel = formatStreakDate(startDate)
+  if (isActive) return `${startLabel} · In progress`
+  if (endDate) return `${startLabel} – ${formatStreakDate(endDate)}`
+  return startLabel
+}
 
 function MatchInsightPanel({
   point,
@@ -284,13 +328,199 @@ function StatsOverview({ matches }: { matches: Match[] }) {
 
 type StatsAnalysisProps = {
   matches: Match[]
+  recordMatches?: Match[]
   scopeLabel?: string
   theme: Theme
 }
 
-export default function DetailedStats({ matches, scopeLabel, theme }: StatsAnalysisProps) {
+function StreakHighlightBox({
+  label,
+  club,
+  stats,
+  showBreakdown = false,
+  solidWin = false,
+}: {
+  label: string
+  club?: string
+  stats: StreakRunStats
+  showBreakdown?: boolean
+  solidWin?: boolean
+}) {
+  const badgeBackground = solidWin ? streakWinBackground : winDrawGradient(stats.wins, stats.draws)
+
+  return (
+    <div className="rounded-2xl border border-ink bg-card px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">
+          {label}
+          {club ? <span className="text-ink"> · {club}</span> : null}
+        </p>
+        <p className={streakRunBadgeClass} style={{ background: badgeBackground }}>
+          {stats.total}
+        </p>
+      </div>
+      {showBreakdown && stats.total > 0 ? (
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink pt-3">
+          <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">Breakdown</p>
+          <div className="flex items-center gap-2">
+            <span className="number text-xs font-semibold" style={{ color: WIN_COLOR }}>
+              {stats.wins}W
+            </span>
+            <span className="text-xs text-muted">·</span>
+            <span className="number text-xs font-semibold" style={{ color: DRAW_COLOR }}>
+              {stats.draws}D
+            </span>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function UnbeatenRunRow({ run }: { run: DatedStreakRun }) {
+  return (
+    <div className="rounded-2xl border border-ink bg-card px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-ink">
+            {run.total} unbeaten
+            {run.isActive ? (
+              <span className="ml-2 rounded-full bg-[#E8F7F1] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#05CD99]">
+                Active
+              </span>
+            ) : null}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {formatStreakRange(run.startDate, run.endDate, run.isActive)}
+          </p>
+        </div>
+        <p className={streakRunBadgeClass} style={{ background: winDrawGradient(run.wins, run.draws) }}>
+          {run.total}
+        </p>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink pt-3">
+        <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">Breakdown</p>
+        <div className="flex items-center gap-2">
+          <span className="number text-xs font-semibold" style={{ color: WIN_COLOR }}>
+            {run.wins}W
+          </span>
+          <span className="text-xs text-muted">·</span>
+          <span className="number text-xs font-semibold" style={{ color: DRAW_COLOR }}>
+            {run.draws}D
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WinStreakRow({ run }: { run: DatedWinStreak }) {
+  return (
+    <div className="rounded-2xl border border-ink bg-card px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-ink">
+            {run.wins} wins in a row
+            {run.isActive ? (
+              <span className="ml-2 rounded-full bg-[#E8F7F1] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#05CD99]">
+                Active
+              </span>
+            ) : null}
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            {formatStreakRange(run.startDate, run.endDate, run.isActive)}
+          </p>
+        </div>
+        <p className={streakRunBadgeClass} style={{ background: streakWinBackground }}>
+          {run.wins}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function StreakAnalysisPanel({ matches }: { matches: Match[] }) {
+  const analysis = useMemo(() => getStreakAnalysis(matches), [matches])
+
+  return (
+    <div className="grid gap-6">
+      <div className="rounded-2xl border border-ink bg-soft px-4 py-4">
+        <h4 className={headingClass}>Streaks</h4>
+        <p className="mt-1 text-sm text-muted">
+          Current form runs update live. Historical lists only include unbeaten runs of{' '}
+          {MIN_NOTABLE_STREAK_LENGTH}+ games and winning streaks of {MIN_NOTABLE_STREAK_LENGTH}+ wins,
+          plus any active run while you build it up.
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Building now</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <StreakHighlightBox label="Current unbeaten run" stats={analysis.currentUnbeaten} showBreakdown />
+          <StreakHighlightBox label="Current winning run" stats={analysis.currentWinning} solidWin />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">Records</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <StreakHighlightBox
+            label="Longest unbeaten run"
+            club="PSG"
+            stats={analysis.longestUnbeaten}
+            showBreakdown
+          />
+          <StreakHighlightBox label="Longest winning run" stats={analysis.longestWinning} solidWin />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          Unbeaten runs ({MIN_NOTABLE_STREAK_LENGTH}+ games)
+        </p>
+        {analysis.notableUnbeatenRuns.length ? (
+          <div className="mt-3 grid gap-3">
+            {analysis.notableUnbeatenRuns.map((run) => (
+              <UnbeatenRunRow key={`${run.startDate}-${run.total}-${run.isActive ? 'active' : run.endDate}`} run={run} />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 rounded-xl border border-dashed border-ink bg-card px-4 py-3 text-sm text-muted">
+            No unbeaten runs of {MIN_NOTABLE_STREAK_LENGTH} games or more yet.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          Winning streaks ({MIN_NOTABLE_STREAK_LENGTH}+ wins)
+        </p>
+        {analysis.notableWinStreaks.length ? (
+          <div className="mt-3 grid gap-3">
+            {analysis.notableWinStreaks.map((run) => (
+              <WinStreakRow key={`${run.startDate}-${run.wins}-${run.isActive ? 'active' : run.endDate}`} run={run} />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 rounded-xl border border-dashed border-ink bg-card px-4 py-3 text-sm text-muted">
+            No winning streaks of {MIN_NOTABLE_STREAK_LENGTH} wins or more yet.
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function DetailedStats({
+  matches,
+  recordMatches = matches,
+  scopeLabel,
+  theme,
+}: StatsAnalysisProps) {
   const colors = useMemo(() => getThemeColors(theme), [theme])
   const statMatches = useMemo(() => matchesWithStats(matches), [matches])
+  const hasStatData = statMatches.length > 0
+  const hasRecordData = recordMatches.length > 0
   const [activeIndex, setActiveIndex] = useState(0)
   const carouselRef = useRef<HTMLDivElement>(null)
   const touchStartX = useRef<number | null>(null)
@@ -318,13 +548,13 @@ export default function DetailedStats({ matches, scopeLabel, theme }: StatsAnaly
     touchStartX.current = null
   }
 
-  if (!statMatches.length) {
+  if (!hasStatData && !hasRecordData) {
     return (
       <section className={`${panelClass} p-6`}>
         <h3 className={headingClass}>Detailed stats analysis</h3>
         <p className="mt-2 text-sm text-muted">
-          Upload screenshot matches to unlock summary, possession, shooting, passing, defending, and
-          events breakdowns.
+          Log matches to unlock streak tracking. Upload screenshot matches for full summary,
+          possession, shooting, passing, defending, and events breakdowns.
         </p>
       </section>
     )
@@ -336,12 +566,14 @@ export default function DetailedStats({ matches, scopeLabel, theme }: StatsAnaly
         <p className="record-display-font text-xs font-bold uppercase text-muted">Match stats breakdown</p>
         <h3 className={`${headingClass} mt-1`}>Stat analysis</h3>
         <p className="mt-1 text-sm text-muted">
-          {scopeLabel ?? `${statMatches.length} logged matches`} · averages per match, PSG vs
-          opposition
+          {scopeLabel ??
+            (hasStatData
+              ? `${statMatches.length} logged matches · averages per match, PSG vs opposition`
+              : `${recordMatches.length} logged matches · streak analysis available`)}
         </p>
       </div>
 
-      <StatsOverview matches={statMatches} />
+      {hasStatData ? <StatsOverview matches={statMatches} /> : null}
 
       <div className="border-b border-ink px-4 py-3">
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -374,7 +606,11 @@ export default function DetailedStats({ matches, scopeLabel, theme }: StatsAnaly
       >
         {statsCategories.map((category) => (
           <div key={category.id} className="w-full shrink-0 snap-center p-6">
-            <CategoryPanel category={category} matches={statMatches} colors={colors} />
+            {category.id === 'streaks' ? (
+              <StreakAnalysisPanel matches={recordMatches} />
+            ) : (
+              <CategoryPanel category={category} matches={statMatches} colors={colors} />
+            )}
           </div>
         ))}
       </div>

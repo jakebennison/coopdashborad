@@ -400,6 +400,7 @@ function App() {
           {!matchesLoading && view === 'stats' && (
             <DetailedStats
               matches={matches.filter(isStatsMatch)}
+              recordMatches={matches}
               theme={theme}
               scopeLabel={`Season view · ${matches.filter(isStatsMatch).length} matches logged`}
             />
@@ -414,6 +415,7 @@ function App() {
           {view === 'detail' && selectedMatch && (
             <MatchDetail
               match={selectedMatch}
+              allMatches={matches}
               theme={theme}
               onBack={() => setView('dashboard')}
               onDelete={() => removeMatch(selectedMatch.id)}
@@ -1574,12 +1576,14 @@ function ReviewForm({
 
 function MatchDetail({
   match,
+  allMatches,
   theme,
   onBack,
   onDelete,
   onSaveComments,
 }: {
   match: Match
+  allMatches: Match[]
   theme: Theme
   onBack: () => void
   onDelete: () => void
@@ -1692,6 +1696,7 @@ function MatchDetail({
       {!manualEntry ? (
         <DetailedStats
           matches={[match]}
+          recordMatches={allMatches}
           theme={theme}
           scopeLabel={`${match.opponent} · ${new Date(match.date).toLocaleDateString()}`}
         />
