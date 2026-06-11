@@ -380,6 +380,12 @@ export const getCurrentUnbeatenStreak = (matches: Match[]): StreakRunStats => {
   return { total: wins + draws, wins, draws }
 }
 
+const beatsLongestUnbeatenRun = (candidate: StreakRunStats, longest: StreakRunStats) => {
+  if (candidate.total > longest.total) return true
+  if (candidate.total < longest.total) return false
+  return candidate.wins > longest.wins
+}
+
 const getLongestUnbeatenRunStats = (matches: Match[]): StreakRunStats => {
   const chronological = [...getFormTickerMatches(matches)].reverse()
   let currentWins = 0
@@ -388,8 +394,9 @@ const getLongestUnbeatenRunStats = (matches: Match[]): StreakRunStats => {
 
   const commitCurrentRun = () => {
     const total = currentWins + currentDraws
-    if (total > longest.total) {
-      longest = { total, wins: currentWins, draws: currentDraws }
+    const candidate = { total, wins: currentWins, draws: currentDraws }
+    if (beatsLongestUnbeatenRun(candidate, longest)) {
+      longest = candidate
     }
     currentWins = 0
     currentDraws = 0

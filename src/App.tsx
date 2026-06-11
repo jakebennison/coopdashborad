@@ -1936,14 +1936,17 @@ function StreakRunBox({
         </p>
       </div>
       {showBreakdown && stats.total > 0 ? (
-        <div className="flex items-center justify-end gap-2 border-t border-ink bg-soft/40 px-4 py-2">
-          <span className="number text-xs font-semibold" style={{ color: resultColors.W }}>
-            {stats.wins}W
-          </span>
-          <span className="text-xs text-muted">·</span>
-          <span className="number text-xs font-semibold" style={{ color: resultColors.D }}>
-            {stats.draws}D
-          </span>
+        <div className="flex items-center justify-between gap-3 border-t border-ink bg-soft/40 px-4 py-2">
+          <p className="record-display-font text-[10px] uppercase text-muted sm:text-xs">Breakdown</p>
+          <div className="flex items-center gap-2">
+            <span className="number text-xs font-semibold" style={{ color: resultColors.W }}>
+              {stats.wins}W
+            </span>
+            <span className="text-xs text-muted">·</span>
+            <span className="number text-xs font-semibold" style={{ color: resultColors.D }}>
+              {stats.draws}D
+            </span>
+          </div>
         </div>
       ) : null}
     </div>
