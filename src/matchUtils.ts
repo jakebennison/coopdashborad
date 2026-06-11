@@ -416,32 +416,43 @@ const getLongestUnbeatenRunStats = (matches: Match[]): StreakRunStats => {
   return longest
 }
 
-const getLongestResultRun = (
-  matches: Match[],
-  countsTowardRun: (result: Result) => boolean,
-): number => {
-  const chronological = [...getFormTickerMatches(matches)].reverse()
-  let current = 0
-  let longest = 0
-
-  for (const match of chronological) {
-    if (countsTowardRun(match.result)) {
-      current += 1
-      longest = Math.max(longest, current)
-    } else {
-      current = 0
-    }
-  }
-
-  return longest
-}
-
 export const getLongestUnbeatenRun = (matches: Match[]): StreakRunStats =>
   getLongestUnbeatenRunStats(matches)
 
-export const getLongestWinningRun = (matches: Match[]): StreakRunStats => {
-  const wins = getLongestResultRun(matches, (result) => result === 'W')
-  return { total: wins, wins, draws: 0 }
+export type WinningRunStats = StreakRunStats & {
+  goalsFor: number
+  goalsAgainst: number
+}
+
+export const getLongestWinningRun = (matches: Match[]): WinningRunStats => {
+  const chronological = [...getFormTickerMatches(matches)].reverse()
+  let currentMatches: Match[] = []
+  let longestMatches: Match[] = []
+
+  const commitRun = () => {
+    if (currentMatches.length > longestMatches.length) {
+      longestMatches = [...currentMatches]
+    }
+    currentMatches = []
+  }
+
+  for (const match of chronological) {
+    if (match.result === 'W') {
+      currentMatches.push(match)
+    } else {
+      commitRun()
+    }
+  }
+
+  commitRun()
+
+  return {
+    total: longestMatches.length,
+    wins: longestMatches.length,
+    draws: 0,
+    goalsFor: longestMatches.reduce((sum, match) => sum + match.myScore, 0),
+    goalsAgainst: longestMatches.reduce((sum, match) => sum + match.opponentScore, 0),
+  }
 }
 
 export const MIN_NOTABLE_STREAK_LENGTH = 5
@@ -463,7 +474,7 @@ export type StreakAnalysis = {
   currentUnbeaten: StreakRunStats
   currentWinning: StreakRunStats
   longestUnbeaten: StreakRunStats
-  longestWinning: StreakRunStats
+  longestWinning: WinningRunStats
   notableUnbeatenRuns: DatedStreakRun[]
   notableWinStreaks: DatedWinStreak[]
 }

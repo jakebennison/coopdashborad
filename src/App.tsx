@@ -41,6 +41,7 @@ import {
   type ExtractionDraftOptions,
   type ManualFormDraft,
   type StreakRunStats,
+  type WinningRunStats,
 } from './matchUtils'
 import { fileDateToInputValue } from './statParsing'
 import DetailedStats from './DetailedStats'
@@ -1725,7 +1726,7 @@ function FormTicker({
   matches: Match[]
   unbeatenStreak: StreakRunStats
   longestUnbeatenRun: StreakRunStats
-  longestWinningRun: StreakRunStats
+  longestWinningRun: WinningRunStats
   trackerRecord: { W: number; D: number; L: number }
   onAddManualEntry: (draft: ManualFormDraft) => void
 }) {
@@ -1917,7 +1918,8 @@ function FormTicker({
                 label="Longest winning run"
                 description="Most consecutive wins"
                 stats={longestWinningRun}
-                solidWin
+                goalsFor={longestWinningRun.goalsFor}
+                goalsAgainst={longestWinningRun.goalsAgainst}
               />
             </div>
           </div>
@@ -1987,17 +1989,25 @@ function RecordStreakCard({
   description,
   stats,
   showBreakdown = false,
-  solidWin = false,
+  goalsFor,
+  goalsAgainst,
 }: {
   label: string
   club?: string
   description?: string
   stats: StreakRunStats
   showBreakdown?: boolean
-  solidWin?: boolean
+  goalsFor?: number
+  goalsAgainst?: number
 }) {
-  const badgeBackground = solidWin ? resultToneStyles.win.background : winDrawGradient(stats.wins, stats.draws)
-  const countLabel = solidWin ? (stats.total === 1 ? 'win' : 'wins') : stats.total === 1 ? 'game' : 'games'
+  const isWinRun = goalsFor !== undefined && goalsAgainst !== undefined
+  const countLabel = isWinRun
+    ? stats.total === 1
+      ? 'win'
+      : 'wins'
+    : stats.total === 1
+      ? 'game'
+      : 'games'
 
   return (
     <div className="rounded-xl border border-ink bg-card p-4">
@@ -2031,14 +2041,20 @@ function RecordStreakCard({
             {stats.draws}D
           </span>
         </div>
-      ) : solidWin && stats.total > 0 ? (
-        <div className="mt-4 border-t border-ink/70 pt-3">
-          <span
-            className="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold text-white"
-            style={{ background: badgeBackground }}
-          >
-            All wins
-          </span>
+      ) : isWinRun && stats.total > 0 ? (
+        <div className="mt-4 grid grid-cols-2 gap-2 border-t border-ink/70 pt-3">
+          <div className="rounded-lg bg-soft px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Scored</p>
+            <p className="number mt-1 text-lg font-bold" style={{ color: resultColors.W }}>
+              {goalsFor}
+            </p>
+          </div>
+          <div className="rounded-lg bg-soft px-3 py-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">Conceded</p>
+            <p className="number mt-1 text-lg font-bold" style={{ color: resultColors.L }}>
+              {goalsAgainst}
+            </p>
+          </div>
         </div>
       ) : stats.total === 0 ? (
         <p className="mt-4 border-t border-ink/70 pt-3 text-xs text-muted">No run logged yet</p>
