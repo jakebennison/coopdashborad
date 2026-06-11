@@ -8,6 +8,7 @@ export type StatsCategoryId =
   | 'defending'
   | 'events'
   | 'streaks'
+  | 'xg'
 
 export type StatFieldConfig = {
   key: keyof MatchStats
@@ -100,6 +101,12 @@ export const statsCategories: StatsCategory[] = [
     id: 'streaks',
     label: 'Streaks',
     description: 'Unbeaten runs and winning streaks from logged form.',
+    stats: [],
+  },
+  {
+    id: 'xg',
+    label: 'xG vs Goals',
+    description: 'Compare expected goals with actual finishing and xG scorelines.',
     stats: [],
   },
 ]

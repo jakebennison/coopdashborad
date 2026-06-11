@@ -4,6 +4,17 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061119,
+    date: '2026-06-11',
+    title: 'xG vs Goals stat analysis tab',
+    body: `New xG vs Goals section in stat analysis for finishing and scoreline insight.
+
+• PSG actual goals compared with xG in totals and per-match averages
+• Conceded goals compared with opposition xG against
+• xG scoreline W/D/L record, efficiency metrics, and trend chart
+• Match-by-match breakdown with finishing deltas and xG battle results`,
+  },
+  {
     id: 2026061118,
     date: '2026-06-11',
     title: 'Smoother welcome form letter entry',

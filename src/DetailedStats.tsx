@@ -38,6 +38,12 @@ import {
   type StreakRunStats,
 } from './matchUtils'
 
+import {
+  buildXgAnalysis,
+  formatSignedAnalysisValue,
+  type XgAnalysisSummary,
+} from './xgAnalysisUtils'
+
 const panelClass = 'card'
 const headingClass = 'record-display-font text-base font-bold uppercase sm:text-lg'
 const secondaryButtonClass = 'btn-secondary px-3 py-2 text-xs'
@@ -511,6 +517,456 @@ function StreakAnalysisPanel({ matches }: { matches: Match[] }) {
   )
 }
 
+function xgDeltaTone(value: number | null, invert = false) {
+  if (value === null || Math.abs(value) < 0.05) return 'neutral' as const
+  const positive = invert ? value < 0 : value > 0
+  return positive ? ('good' as const) : ('bad' as const)
+}
+
+function XgInsightCard({
+  label,
+  value,
+  detail,
+  tone = 'neutral',
+}: {
+  label: string
+  value: string
+  detail?: string
+  tone?: 'good' | 'bad' | 'neutral'
+}) {
+  const toneClass =
+    tone === 'good' ? 'text-[#05CD99]' : tone === 'bad' ? 'text-[#EE5D50]' : 'text-ink'
+
+  return (
+    <div className="rounded-2xl border border-ink bg-card p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">{label}</p>
+      <p className={`number mt-2 text-2xl font-bold ${toneClass}`}>{value}</p>
+      {detail ? <p className="mt-1 text-xs text-muted">{detail}</p> : null}
+    </div>
+  )
+}
+
+function XgTotalsBlock({
+  title,
+  rows,
+}: {
+  title: string
+  rows: Array<{ label: string; psg: string; opponent?: string }>
+}) {
+  return (
+    <div className="rounded-2xl border border-ink bg-card p-4">
+      <p className="text-sm font-semibold text-ink">{title}</p>
+      <div className="mt-4 grid gap-3">
+        {rows.map((row) => (
+          <div key={row.label} className="rounded-xl bg-soft px-3 py-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">{row.label}</p>
+            <div className={`mt-2 grid gap-2 ${row.opponent ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <div>
+                <p className="text-[10px] font-semibold uppercase text-muted">PSG</p>
+                <p className="number mt-1 text-lg font-bold" style={{ color: PSG_COLOR }}>
+                  {row.psg}
+                </p>
+              </div>
+              {row.opponent ? (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase text-muted">Opposition</p>
+                  <p className="number mt-1 text-lg font-bold text-muted">{row.opponent}</p>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function XgComparisonChart({
+  title,
+  description,
+  rows,
+  colors,
+}: {
+  title: string
+  description: string
+  rows: Array<{ label: string; psg: number; opponent: number; psgColor?: string; opponentColor?: string }>
+  colors: ReturnType<typeof getThemeColors>
+}) {
+  return (
+    <div className="rounded-2xl border border-ink bg-card p-4">
+      <p className="text-sm font-semibold text-ink">{title}</p>
+      <p className="mt-1 text-xs text-muted">{description}</p>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        {rows.map((row) => {
+          const barData = [
+            { team: 'PSG', value: row.psg, color: row.psgColor ?? PSG_COLOR },
+            { team: 'Opposition', value: row.opponent, color: row.opponentColor ?? OPP_COLOR },
+          ]
+          const yAxis = getYAxisConfig(row.psg, row.opponent, '', 1, 'xG')
+
+          return (
+            <div key={row.label}>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">{row.label}</p>
+              <div className="h-40">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} barCategoryGap="35%">
+                    <CartesianGrid stroke={colors.ink} strokeOpacity={0.08} vertical={false} />
+                    <XAxis
+                      dataKey="team"
+                      tick={{ fill: colors.chartMuted, fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={yAxis.domain}
+                      allowDecimals={yAxis.allowDecimals}
+                      tickCount={yAxis.tickCount}
+                      tick={{ fill: colors.chartMuted, fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<ChartTooltipContent statLabel="Value" decimals={1} />} />
+                    <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                      {barData.map((entry) => (
+                        <Cell key={entry.team} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function XgRecordTiles({ record }: { record: XgAnalysisSummary['xgRecord'] }) {
+  const total = record.W + record.D + record.L
+
+  if (!total) {
+    return (
+      <p className="mt-3 rounded-xl border border-dashed border-ink bg-card px-4 py-3 text-sm text-muted">
+        Log matches with both teams&apos; xG to unlock xG scoreline comparisons.
+      </p>
+    )
+  }
+
+  return (
+    <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="rounded-xl border border-ink px-3 py-3 text-center" style={{ background: streakWinBackground }}>
+        <p className="text-[10px] font-bold uppercase text-white">W</p>
+        <p className="number mt-1 text-2xl font-bold text-white">{record.W}</p>
+      </div>
+      <div className="rounded-xl border border-ink px-3 py-3 text-center" style={{ background: streakDrawBackground }}>
+        <p className="text-[10px] font-bold uppercase text-[#101010]">D</p>
+        <p className="number mt-1 text-2xl font-bold text-[#101010]">{record.D}</p>
+      </div>
+      <div className="rounded-xl border border-ink px-3 py-3 text-center" style={{ background: 'linear-gradient(145deg, #F56B61 0%, #EE5D50 100%)' }}>
+        <p className="text-[10px] font-bold uppercase text-white">L</p>
+        <p className="number mt-1 text-2xl font-bold text-white">{record.L}</p>
+      </div>
+    </div>
+  )
+}
+
+function XgAnalysisPanel({
+  matches,
+  colors,
+}: {
+  matches: Match[]
+  colors: ReturnType<typeof getThemeColors>
+}) {
+  const analysis = useMemo(() => buildXgAnalysis(matches), [matches])
+  const trendData = useMemo(
+    () =>
+      [...analysis.matches]
+        .slice(0, 10)
+        .reverse()
+        .map((row) => ({
+          label: new Date(row.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          opponent: row.opponent,
+          goals: row.psgGoals,
+          xg: row.psgXg,
+        })),
+    [analysis.matches],
+  )
+
+  if (!analysis.xgMatchCount) {
+    return (
+      <div className="rounded-2xl border border-dashed border-ink bg-soft px-4 py-8 text-center">
+        <h4 className={headingClass}>xG vs Goals</h4>
+        <p className="mt-2 text-sm text-muted">
+          Upload screenshot matches with expected goals logged to compare finishing and xG scorelines.
+        </p>
+      </div>
+    )
+  }
+
+  const finishingTone = xgDeltaTone(analysis.finishingDeltaAverage)
+  const defensiveTone = xgDeltaTone(analysis.defensiveDeltaAverage, true)
+
+  return (
+    <div className="grid gap-6">
+      <div className="rounded-2xl border border-ink bg-soft px-4 py-4">
+        <h4 className={headingClass}>xG vs Goals</h4>
+        <p className="mt-1 text-sm text-muted">
+          Compare actual goals with expected goals across {analysis.xgMatchCount} logged matches
+          {analysis.bothXgMatchCount ? ` · ${analysis.bothXgMatchCount} with both teams' xG` : ''}.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <XgInsightCard
+          label="Finishing delta"
+          value={formatSignedAnalysisValue(analysis.finishingDeltaAverage, ' goals', 1)}
+          detail={`${formatAnalysisValue(analysis.psgGoalsAverage, '', 1)} scored vs ${formatAnalysisValue(analysis.psgXgAverage, '', 1)} xG per match`}
+          tone={finishingTone}
+        />
+        <XgInsightCard
+          label="Defensive delta"
+          value={formatSignedAnalysisValue(analysis.defensiveDeltaAverage, ' goals', 1)}
+          detail={
+            analysis.xgAgainstAverage != null
+              ? `${formatAnalysisValue(analysis.concededAverage, '', 1)} conceded vs ${formatAnalysisValue(analysis.xgAgainstAverage, '', 1)} xG against per match`
+              : 'Opposition xG needed for defensive comparison'
+          }
+          tone={defensiveTone}
+        />
+        <XgInsightCard
+          label="Finishing efficiency"
+          value={analysis.finishingEfficiency != null ? `${analysis.finishingEfficiency.toFixed(2)}x` : '-'}
+          detail="Actual goals divided by xG across the sample"
+          tone={xgDeltaTone(analysis.finishingEfficiency != null ? analysis.finishingEfficiency - 1 : null)}
+        />
+        <XgInsightCard
+          label="Avg scorelines"
+          value={analysis.avgActualScoreline}
+          detail={
+            analysis.avgXgScoreline
+              ? `Actual vs xG · ${analysis.avgXgScoreline}`
+              : 'xG scoreline needs opposition xG'
+          }
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <XgTotalsBlock
+          title="PSG goals vs xG"
+          rows={[
+            {
+              label: 'Season totals',
+              psg: `${analysis.psgGoalsTotal} goals · ${formatAnalysisValue(analysis.psgXgTotal, '', 1)} xG`,
+            },
+            {
+              label: 'Per-match average',
+              psg: `${formatAnalysisValue(analysis.psgGoalsAverage, '', 1)} goals · ${formatAnalysisValue(analysis.psgXgAverage, '', 1)} xG`,
+            },
+            {
+              label: 'Finishing balance',
+              psg: `${formatSignedAnalysisValue(analysis.finishingDeltaTotal, ' goals', 1)} total · ${formatSignedAnalysisValue(analysis.finishingDeltaAverage, ' per match', 1)} avg`,
+            },
+          ]}
+        />
+        <XgTotalsBlock
+          title="Conceded vs xG against"
+          rows={[
+            {
+              label: 'Season totals',
+              psg: `${analysis.concededTotal} conceded · ${formatAnalysisValue(analysis.xgAgainstTotal, '', 1)} xG against`,
+            },
+            {
+              label: 'Per-match average',
+              psg: `${formatAnalysisValue(analysis.concededAverage, '', 1)} conceded · ${formatAnalysisValue(analysis.xgAgainstAverage, '', 1)} xG against`,
+            },
+            {
+              label: 'Defensive balance',
+              psg: `${formatSignedAnalysisValue(analysis.defensiveDeltaTotal, ' goals', 1)} total · ${formatSignedAnalysisValue(analysis.defensiveDeltaAverage, ' per match', 1)} avg`,
+            },
+          ]}
+        />
+      </div>
+
+      <div className="rounded-2xl border border-ink bg-card p-4">
+        <p className="text-sm font-semibold text-ink">xG scoreline record</p>
+        <p className="mt-1 text-xs text-muted">
+          Matches where PSG&apos;s xG beat the opposition&apos;s xG ({analysis.totalXgScoreline ?? 'totals unavailable'} total ·{' '}
+          {analysis.avgXgScoreline ?? 'avg unavailable'} per match)
+        </p>
+        <XgRecordTiles record={analysis.xgRecord} />
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-xl bg-soft px-3 py-3 text-sm text-muted">
+            Actual scoreline totals · <span className="font-semibold text-ink">{analysis.totalActualScoreline}</span>
+          </div>
+          {analysis.totalXgScoreline ? (
+            <div className="rounded-xl bg-soft px-3 py-3 text-sm text-muted">
+              xG scoreline totals · <span className="font-semibold text-ink">{analysis.totalXgScoreline}</span>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <XgComparisonChart
+        title="Totals comparison"
+        description="Season totals for actual output versus expected goals"
+        colors={colors}
+        rows={[
+          {
+            label: 'PSG attack',
+            psg: analysis.psgGoalsTotal,
+            opponent: analysis.psgXgTotal,
+            opponentColor: '#8ADFC8',
+          },
+          ...(analysis.bothXgMatchCount
+            ? [
+                {
+                  label: 'PSG defence',
+                  psg: analysis.concededTotal,
+                  opponent: analysis.xgAgainstTotal,
+                  psgColor: '#EE5D50',
+                  opponentColor: '#FFB547',
+                },
+              ]
+            : []),
+        ]}
+      />
+
+      {trendData.length > 1 ? (
+        <div className="rounded-2xl border border-ink bg-card p-4">
+          <p className="text-sm font-semibold text-ink">Goals vs xG trend</p>
+          <p className="mt-1 text-xs text-muted">Last {trendData.length} logged matches with xG</p>
+          <div className="mt-4 h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trendData} margin={{ top: 12, right: 16, left: 8, bottom: 8 }}>
+                <CartesianGrid stroke={colors.ink} strokeOpacity={0.08} vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: colors.chartMuted, fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  domain={[0, 6]}
+                  allowDecimals
+                  tickCount={7}
+                  tick={{ fill: colors.chartMuted, fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="goals" name="Goals" stroke={PSG_COLOR} strokeWidth={3} dot connectNulls />
+                <Line
+                  type="monotone"
+                  dataKey="xg"
+                  name="xG"
+                  stroke={OPP_COLOR}
+                  strokeWidth={2.5}
+                  strokeDasharray="6 4"
+                  dot
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="rounded-2xl border border-ink bg-card p-4">
+        <p className="text-sm font-semibold text-ink">Insights</p>
+        <ul className="mt-3 grid gap-2 text-sm text-muted">
+          <li>
+            Outscored xG in <span className="font-semibold text-ink">{analysis.overperformCount}</span> matches, underscored in{' '}
+            <span className="font-semibold text-ink">{analysis.underperformCount}</span>.
+          </li>
+          {analysis.bothXgMatchCount ? (
+            <>
+              <li>
+                Won the xG battle in{' '}
+                <span className="font-semibold text-ink">{analysis.xgRecord.W}</span> matches and lost it in{' '}
+                <span className="font-semibold text-ink">{analysis.xgRecord.L}</span>.
+              </li>
+              <li>
+                Lost despite winning xG in{' '}
+                <span className="font-semibold text-ink">{analysis.xgWinActualLossCount}</span> games · won despite losing xG in{' '}
+                <span className="font-semibold text-ink">{analysis.xgLossActualWinCount}</span>.
+              </li>
+            </>
+          ) : null}
+        </ul>
+      </div>
+
+      <div className="rounded-2xl border border-ink bg-card p-4">
+        <p className="text-sm font-semibold text-ink">Match-by-match breakdown</p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-ink text-[10px] font-semibold uppercase tracking-wide text-muted">
+                <th className="px-3 py-2">Match</th>
+                <th className="px-3 py-2">Actual</th>
+                <th className="px-3 py-2">xG</th>
+                <th className="px-3 py-2">Finishing</th>
+                <th className="px-3 py-2">xG result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {analysis.matches.slice(0, 12).map((row) => (
+                <tr key={row.id} className="border-b border-ink/40 last:border-0">
+                  <td className="px-3 py-3">
+                    <p className="font-semibold text-ink">vs {row.opponent}</p>
+                    <p className="text-xs text-muted">
+                      {new Date(row.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {row.result}
+                    </p>
+                  </td>
+                  <td className="number px-3 py-3 font-semibold text-ink">
+                    {row.psgGoals}-{row.opponentGoals}
+                  </td>
+                  <td className="number px-3 py-3 text-muted">
+                    {row.opponentXg != null
+                      ? `${formatAnalysisValue(row.psgXg, '', 1)}-${formatAnalysisValue(row.opponentXg, '', 1)}`
+                      : formatAnalysisValue(row.psgXg, '', 1)}
+                  </td>
+                  <td
+                    className={`number px-3 py-3 font-semibold ${
+                      xgDeltaTone(row.finishingDelta) === 'good'
+                        ? 'text-[#05CD99]'
+                        : xgDeltaTone(row.finishingDelta) === 'bad'
+                          ? 'text-[#EE5D50]'
+                          : 'text-muted'
+                    }`}
+                  >
+                    {formatSignedAnalysisValue(row.finishingDelta, '', 1)}
+                  </td>
+                  <td className="px-3 py-3">
+                    {row.xgResult ? (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                        style={{
+                          background:
+                            row.xgResult === 'W'
+                              ? streakWinBackground
+                              : row.xgResult === 'D'
+                                ? streakDrawBackground
+                                : 'linear-gradient(145deg, #F56B61 0%, #EE5D50 100%)',
+                        }}
+                      >
+                        {row.xgResult}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted">-</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function DetailedStats({
   matches,
   recordMatches = matches,
@@ -608,6 +1064,8 @@ export default function DetailedStats({
           <div key={category.id} className="w-full shrink-0 snap-center p-6">
             {category.id === 'streaks' ? (
               <StreakAnalysisPanel matches={recordMatches} />
+            ) : category.id === 'xg' ? (
+              <XgAnalysisPanel matches={statMatches} colors={colors} />
             ) : (
               <CategoryPanel category={category} matches={statMatches} colors={colors} />
             )}
