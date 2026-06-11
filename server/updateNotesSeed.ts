@@ -4,6 +4,56 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061110,
+    date: '2026-06-11',
+    title: 'Dashboard W/L Ratio metric column',
+    body: `Added a third headline metric beside the overall record stack.
+
+• W/L Ratio shows wins minus losses from the overall record
+• Green when positive, red when zero or negative
+• Win rate, matches played, and W/L Ratio align top-to-bottom with the W, D, and L numbers`,
+  },
+  {
+    id: 2026061109,
+    date: '2026-06-11',
+    title: 'Stats analysis totals vs averages',
+    body: `Fixed the stat-by-stat breakdown showing the same numbers for both modes.
+
+• Count stats now show season totals and per-match averages side by side
+• Percentage stats stay on per-match average only
+• Category charts still switch between totals and averages with the toggle`,
+  },
+  {
+    id: 2026061108,
+    date: '2026-06-11',
+    title: 'Unbeaten streak badge styling',
+    body: `Refined current and longest unbeaten streak visuals in recent form.
+
+• Compact green/orange badges instead of full-width colour blocks
+• Softer feathered blend between wins and draws in the badge
+• Longest winning run stays solid green`,
+  },
+  {
+    id: 2026061107,
+    date: '2026-06-11',
+    title: 'Updates timeline grouped by date',
+    body: `Changelog entries are easier to scan on the Updates page.
+
+• Entries grouped under their date on the timeline
+• Tap a date to expand or collapse its updates
+• Tap an individual update to read full release notes`,
+  },
+  {
+    id: 2026061106,
+    date: '2026-06-11',
+    title: 'Historical changelog seed',
+    body: `The Updates timeline now auto-fills with project history when empty.
+
+• Seeds all major dashboard changes from launch onward
+• Shared across users when Postgres is connected
+• New seed entries are added automatically when missing`,
+  },
+  {
     id: 2026061102,
     date: '2026-06-11',
     title: 'Streak records in recent form',

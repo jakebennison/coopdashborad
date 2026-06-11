@@ -94,7 +94,7 @@ const rowToUpdateNote = (row: {
 
 export const listUpdateNotes = async (): Promise<UpdateNote[]> => {
   await ensureUpdateNotesStore()
-  await seedUpdateNotesIfEmpty()
+  await seedUpdateNotesIfMissing()
 
   if (storageMode === 'postgres') {
     const result = await withDbClient((client) =>
@@ -110,22 +110,23 @@ export const listUpdateNotes = async (): Promise<UpdateNote[]> => {
   return readFileStore()
 }
 
-const seedUpdateNotesIfEmpty = async () => {
-  const existing =
+const seedUpdateNotesIfMissing = async () => {
+  const existingIds =
     storageMode === 'postgres'
       ? await withDbClient(async (client) => {
-          const result = await client.query('SELECT COUNT(*)::int AS count FROM update_notes')
-          return Number(result.rows[0]?.count ?? 0)
+          const result = await client.query('SELECT id FROM update_notes')
+          return new Set(result.rows.map((row) => Number(row.id)))
         })
-      : (await readFileStore()).length
+      : new Set((await readFileStore()).map((entry) => entry.id))
 
-  if (existing > 0) return
+  const missing = UPDATE_NOTES_SEED.filter((entry) => !existingIds.has(entry.id))
+  if (!missing.length) return
 
-  for (const entry of UPDATE_NOTES_SEED) {
+  for (const entry of missing) {
     await createUpdateNote(seedUpdateNoteEntry(entry))
   }
 
-  console.log(`[updates] Seeded ${UPDATE_NOTES_SEED.length} changelog entries`)
+  console.log(`[updates] Seeded ${missing.length} missing changelog ${missing.length === 1 ? 'entry' : 'entries'}`)
 }
 
 export const createUpdateNote = async (note: UpdateNote): Promise<UpdateNote> => {

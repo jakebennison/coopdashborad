@@ -508,38 +508,41 @@ function Dashboard({
       <section className={`${panelClass} p-6`}>
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between xl:gap-10">
           <div className="min-w-0 shrink-0">
-            <OverallRecordDisplay wins={record.W} draws={record.D} losses={record.L} />
-          </div>
-          <div className="grid w-full max-w-[9.5rem] shrink-0 grid-rows-3 gap-2 xl:w-[9.5rem] xl:self-end">
-            <div className={`${innerBoxClass} flex flex-col justify-center px-3 py-2`}>
-              <p className="record-display-font text-[10px] font-bold uppercase leading-tight">Win rate</p>
-              <AnimatedCountUp
-                value={winRate}
-                color={winRateColor(winRate)}
-                suffix="%"
-                delayMs={500}
-                className="mt-0.5 text-lg sm:text-xl"
-              />
-            </div>
-            <div className={`${innerBoxClass} flex flex-col justify-center px-3 py-2`}>
-              <p className="record-display-font text-[10px] font-bold uppercase leading-tight">Matches played</p>
-              <AnimatedCountUp
-                value={total}
-                color="var(--color-ink)"
-                delayMs={640}
-                className="mt-0.5 text-lg sm:text-xl"
-              />
-            </div>
-            <div className={`${innerBoxClass} flex flex-col justify-center px-3 py-2`}>
-              <p className="record-display-font text-[10px] font-bold uppercase leading-tight">W/L Ratio</p>
-              <AnimatedCountUp
-                value={wlRatio}
-                color={wlRatioColor}
-                signed
-                delayMs={780}
-                className="mt-0.5 text-lg sm:text-xl"
-              />
-            </div>
+            <OverallRecordDisplay
+              wins={record.W}
+              draws={record.D}
+              losses={record.L}
+              metrics={
+                <>
+                  <DashboardMetricBox label="Win rate">
+                    <AnimatedCountUp
+                      value={winRate}
+                      color={winRateColor(winRate)}
+                      suffix="%"
+                      delayMs={500}
+                      className="mt-0.5 text-lg sm:text-xl"
+                    />
+                  </DashboardMetricBox>
+                  <DashboardMetricBox label="Matches played">
+                    <AnimatedCountUp
+                      value={total}
+                      color="var(--color-ink)"
+                      delayMs={640}
+                      className="mt-0.5 text-lg sm:text-xl"
+                    />
+                  </DashboardMetricBox>
+                  <DashboardMetricBox label="W/L Ratio">
+                    <AnimatedCountUp
+                      value={wlRatio}
+                      color={wlRatioColor}
+                      signed
+                      delayMs={780}
+                      className="mt-0.5 text-lg sm:text-xl"
+                    />
+                  </DashboardMetricBox>
+                </>
+              }
+            />
           </div>
           <div className="w-full max-w-[15rem] shrink-0 xl:w-[15rem]">
             <SeasonClubsPlayed clubs={SEASON_CLUBS} />
@@ -1671,6 +1674,15 @@ function MatchDetail({
         />
       ) : null}
     </main>
+  )
+}
+
+function DashboardMetricBox({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className={`${innerBoxClass} flex h-full min-h-0 flex-col justify-center px-3 py-2`}>
+      <p className="record-display-font text-[10px] font-bold uppercase leading-tight">{label}</p>
+      {children}
+    </div>
   )
 }
 
