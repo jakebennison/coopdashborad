@@ -472,6 +472,8 @@ function Dashboard({
   const record = getSeasonRecord(matches)
   const total = record.W + record.D + record.L
   const winRate = total ? Math.round((record.W / total) * 100) : 0
+  const wlRatio = record.W - record.L
+  const wlRatioColor = wlRatio > 0 ? resultColors.W : resultColors.L
   const goalsFor = statsMatches.reduce((sum, match) => sum + match.myScore, 0)
   const goalsAgainst = statsMatches.reduce((sum, match) => sum + match.opponentScore, 0)
   const homeMatches = statsMatches.filter((match) => match.venue === 'home')
@@ -508,8 +510,8 @@ function Dashboard({
           <div className="min-w-0 shrink-0">
             <OverallRecordDisplay wins={record.W} draws={record.D} losses={record.L} />
           </div>
-          <div className="flex w-full max-w-[11.5rem] shrink-0 flex-col gap-3 xl:w-[11.5rem]">
-            <div className={`${innerBoxClass} px-4 py-3`}>
+          <div className="grid w-full max-w-[11.5rem] shrink-0 grid-rows-3 gap-3 xl:w-[11.5rem]">
+            <div className={`${innerBoxClass} flex min-h-[5.5rem] flex-col justify-center px-4 py-3`}>
               <p className="record-display-font text-xs font-bold uppercase">Win rate</p>
               <AnimatedCountUp
                 value={winRate}
@@ -519,12 +521,22 @@ function Dashboard({
                 className="mt-1 text-2xl sm:text-3xl"
               />
             </div>
-            <div className={`${innerBoxClass} px-4 py-3`}>
+            <div className={`${innerBoxClass} flex min-h-[5.5rem] flex-col justify-center px-4 py-3`}>
               <p className="record-display-font text-xs font-bold uppercase">Matches played</p>
               <AnimatedCountUp
                 value={total}
                 color="var(--color-ink)"
                 delayMs={640}
+                className="mt-1 text-2xl sm:text-3xl"
+              />
+            </div>
+            <div className={`${innerBoxClass} flex min-h-[5.5rem] flex-col justify-center px-4 py-3`}>
+              <p className="record-display-font text-xs font-bold uppercase">W/L Ratio</p>
+              <AnimatedCountUp
+                value={wlRatio}
+                color={wlRatioColor}
+                signed
+                delayMs={780}
                 className="mt-1 text-2xl sm:text-3xl"
               />
             </div>

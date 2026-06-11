@@ -494,8 +494,9 @@ function CategoryPanel({
             </div>
           ) : null}
         </div>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <TeamLegend />
+          <ComparisonModeToggle mode={comparisonMode} onChange={setComparisonMode} />
         </div>
       </div>
 
@@ -514,7 +515,12 @@ function CategoryPanel({
       ) : null}
 
       {chartRows.length ? (
-        <CategoryComparisonChart rows={chartRows} colors={colors} comparisonMode={comparisonMode} />
+        <CategoryComparisonChart
+          key={comparisonMode}
+          rows={chartRows}
+          colors={colors}
+          comparisonMode={comparisonMode}
+        />
       ) : null}
 
       {trendData.length > 1 ? (
@@ -529,14 +535,12 @@ function CategoryPanel({
       ) : null}
 
       <div className="grid gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Stat-by-stat breakdown</p>
-            <p className="mt-1 text-xs text-muted">
-              Count stats use season totals by default. Percentages always use per-match average.
-            </p>
-          </div>
-          <ComparisonModeToggle mode={comparisonMode} onChange={setComparisonMode} />
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Stat-by-stat breakdown</p>
+          <p className="mt-1 text-xs text-muted">
+            Count stats show season totals and per-match averages together. Percentages use per-match
+            average only.
+          </p>
         </div>
         {rows.map((row) => (
           <ComparisonStatRow key={row.key} row={row} />
@@ -573,7 +577,7 @@ function CategoryComparisonChart({
           row.key === 'possession' && rows.length === 1 ? (
             <PossessionComparisonChart key={row.key} row={row} colors={colors} />
           ) : (
-            <StatComparisonChart key={row.key} row={row} colors={colors} />
+            <StatComparisonChart key={`${row.key}-${row.comparisonMode}`} row={row} colors={colors} />
           ),
         )}
       </div>
@@ -842,25 +846,66 @@ function TrendChart({
   )
 }
 
+function ComparisonValueBlock({
+  label,
+  psg,
+  opponent,
+  suffix,
+  decimals,
+}: {
+  label: string
+  psg: number | null
+  opponent: number | null
+  suffix?: string
+  decimals?: number
+}) {
+  return (
+    <div className="rounded-xl bg-soft px-3 py-2">
+      <p className="text-[10px] font-semibold uppercase text-muted">{label}</p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <div>
+          <p className="text-[10px] font-semibold uppercase text-muted">PSG</p>
+          <p className="number mt-1 text-lg font-bold" style={{ color: PSG_COLOR }}>
+            {formatAnalysisValue(psg, suffix, decimals)}
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase text-muted">Opposition</p>
+          <p className="number mt-1 text-lg font-bold text-muted">
+            {formatAnalysisValue(opponent, suffix, decimals)}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ComparisonStatRow({ row }: { row: ComparisonRow }) {
-  const psg = row.psg
-  const opponent = row.opponent
-  const hasBoth = typeof psg === 'number' && typeof opponent === 'number'
   const delta = formatComparisonDelta(row)
-  const modeLabel = comparisonModeLabel(row)
-  const aheadLabel =
-    row.comparisonMode === 'average' ? 'PSG ahead on average' : 'PSG ahead in totals'
-  const behindLabel =
-    row.comparisonMode === 'average'
-      ? 'Opposition ahead on average'
-      : 'Opposition ahead in totals'
-  let psgWidth = typeof psg === 'number' ? 100 : 0
+  const averageDelta = formatComparisonDelta({
+    key: row.key,
+    psg: row.psgAverage,
+    opponent: row.opponentAverage,
+    suffix: row.suffix,
+    decimals: row.decimals,
+  })
+  const totalDelta = formatComparisonDelta({
+    key: row.key,
+    psg: row.psgTotal,
+    opponent: row.opponentTotal,
+    suffix: row.suffix,
+    decimals: row.decimals,
+  })
+  const barPsg = row.averageOnly ? row.psgAverage : row.psgTotal
+  const barOpponent = row.averageOnly ? row.opponentAverage : row.opponentTotal
+  const hasBoth = typeof barPsg === 'number' && typeof barOpponent === 'number'
+  let psgWidth = typeof barPsg === 'number' ? 100 : 0
   let opponentWidth = 0
 
   if (hasBoth) {
-    const total = Math.max(psg + opponent, 1)
-    psgWidth = (psg / total) * 100
-    opponentWidth = (opponent / total) * 100
+    const total = Math.max(barPsg + barOpponent, 1)
+    psgWidth = (barPsg / total) * 100
+    opponentWidth = (barOpponent / total) * 100
   }
 
   return (
@@ -868,25 +913,35 @@ function ComparisonStatRow({ row }: { row: ComparisonRow }) {
       <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-semibold text-ink">{row.label}</p>
-          <p className="mt-1 text-xs text-muted">{modeLabel}</p>
-          {row.averageOnly && row.comparisonMode === 'average' ? (
-            <p className="mt-1 text-[11px] text-muted">Percentages are always compared as per-match averages.</p>
+          {row.averageOnly ? (
+            <p className="mt-1 text-xs text-muted">Per-match average</p>
+          ) : (
+            <p className="mt-1 text-xs text-muted">Season total and per-match average</p>
+          )}
+          {row.averageOnly && row.psgWins === true ? (
+            <p className="mt-1 text-xs font-semibold text-[#05CD99]">PSG ahead on average</p>
           ) : null}
-          {row.psgWins === true ? (
-            <p className="mt-1 text-xs font-semibold text-[#05CD99]">{aheadLabel}</p>
-          ) : null}
-          {row.psgWins === false ? (
-            <p className="mt-1 text-xs font-semibold text-muted">{behindLabel}</p>
+          {row.averageOnly && row.psgWins === false ? (
+            <p className="mt-1 text-xs font-semibold text-muted">Opposition ahead on average</p>
           ) : null}
         </div>
-        {delta ? (
+        {!row.averageOnly && totalDelta ? (
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              totalDelta.tone === 'psg'
+                ? 'bg-[#E8F7F1] text-[#05CD99]'
+                : 'bg-soft text-muted'
+            }`}
+          >
+            Total {totalDelta.text}
+          </span>
+        ) : null}
+        {row.averageOnly && delta ? (
           <span
             className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
               delta.tone === 'psg'
                 ? 'bg-[#E8F7F1] text-[#05CD99]'
-                : delta.tone === 'opp'
-                  ? 'bg-soft text-muted'
-                  : 'bg-soft text-muted'
+                : 'bg-soft text-muted'
             }`}
           >
             {delta.text}
@@ -894,35 +949,51 @@ function ComparisonStatRow({ row }: { row: ComparisonRow }) {
         ) : null}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-soft px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase text-muted">PSG</p>
-          <p className="number mt-1 text-lg font-bold" style={{ color: PSG_COLOR }}>
-            {formatAnalysisValue(row.psg, row.suffix, row.decimals)}
-          </p>
+      {row.averageOnly ? (
+        <ComparisonValueBlock
+          label="Per-match average"
+          psg={row.psgAverage}
+          opponent={row.opponentAverage}
+          suffix={row.suffix}
+          decimals={row.decimals}
+        />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ComparisonValueBlock
+            label="Season total"
+            psg={row.psgTotal}
+            opponent={row.opponentTotal}
+            suffix={row.suffix}
+            decimals={row.decimals}
+          />
+          <ComparisonValueBlock
+            label="Per-match avg"
+            psg={row.psgAverage}
+            opponent={row.opponentAverage}
+            suffix={row.suffix}
+            decimals={row.decimals}
+          />
         </div>
-        <div className="rounded-xl bg-soft px-3 py-2">
-          <p className="text-[10px] font-semibold uppercase text-muted">Opposition</p>
-          <p className="number mt-1 text-lg font-bold text-muted">
-            {formatAnalysisValue(row.opponent, row.suffix, row.decimals)}
-          </p>
-        </div>
-      </div>
+      )}
+
+      {!row.averageOnly && averageDelta ? (
+        <p className="mt-3 text-xs font-semibold text-muted">Average edge · {averageDelta.text}</p>
+      ) : null}
 
       <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-soft">
-        {typeof psg === 'number' && psgWidth > 0 ? (
+        {typeof barPsg === 'number' && psgWidth > 0 ? (
           <div
             className="h-full rounded-l-full"
             style={{ width: `${psgWidth}%`, background: PSG_COLOR }}
           />
         ) : null}
-        {typeof opponent === 'number' && opponentWidth > 0 ? (
+        {typeof barOpponent === 'number' && opponentWidth > 0 ? (
           <div
             className="h-full rounded-r-full"
             style={{ width: `${opponentWidth}%`, background: OPP_COLOR }}
           />
         ) : null}
-        {!hasBoth && typeof psg === 'number' ? (
+        {!hasBoth && typeof barPsg === 'number' ? (
           <div className="h-full rounded-full" style={{ width: `${psgWidth}%`, background: PSG_COLOR }} />
         ) : null}
       </div>

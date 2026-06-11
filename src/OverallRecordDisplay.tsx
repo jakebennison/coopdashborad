@@ -5,6 +5,7 @@ type AnimatedCountUpProps = {
   color: string
   delayMs?: number
   suffix?: string
+  signed?: boolean
   className?: string
   glow?: boolean
 }
@@ -17,6 +18,7 @@ export function AnimatedCountUp({
   color,
   delayMs = 0,
   suffix = '',
+  signed = false,
   className = 'text-[clamp(2.75rem,7vw,4.75rem)]',
   glow = false,
 }: AnimatedCountUpProps) {
@@ -67,8 +69,9 @@ export function AnimatedCountUp({
         color,
         textShadow: glow ? softGlowShadow(color) : undefined,
       }}
-      aria-label={`${value}${suffix}`}
+      aria-label={`${signed && value > 0 ? '+' : ''}${value}${suffix}`}
     >
+      {signed && displayValue > 0 ? '+' : ''}
       {displayValue}
       {suffix}
     </p>

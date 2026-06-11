@@ -66,6 +66,10 @@ export type ComparisonRow = {
   decimals?: number
   psg: number | null
   opponent: number | null
+  psgAverage: number | null
+  opponentAverage: number | null
+  psgTotal: number | null
+  opponentTotal: number | null
   psgWins: boolean | null
   comparisonMode: ComparisonMode
   averageOnly: boolean
@@ -85,14 +89,13 @@ export const buildComparisonRows = (
   fields.map((field) => {
     const averageOnly = isAverageOnlyStat(field.key, field.suffix)
     const comparisonMode: ComparisonMode = mode === 'average' || averageOnly ? 'average' : 'total'
-    const psg =
-      comparisonMode === 'average'
-        ? averagePsgStat(matches, field.key)
-        : totalPsgStat(matches, field.key)
+    const psgAverage = averagePsgStat(matches, field.key)
+    const opponentAverage = averageOpponentStat(matches, field.key)
+    const psgTotal = totalPsgStat(matches, field.key)
+    const opponentTotal = totalOpponentStat(matches, field.key)
+    const psg = comparisonMode === 'average' ? psgAverage : averageOnly ? psgAverage : psgTotal
     const opponent =
-      comparisonMode === 'average'
-        ? averageOpponentStat(matches, field.key)
-        : totalOpponentStat(matches, field.key)
+      comparisonMode === 'average' ? opponentAverage : averageOnly ? opponentAverage : opponentTotal
     const psgWins =
       typeof psg === 'number' && typeof opponent === 'number'
         ? lowerIsBetterStat(field.key)
@@ -107,6 +110,10 @@ export const buildComparisonRows = (
       decimals: field.decimals,
       psg,
       opponent,
+      psgAverage,
+      opponentAverage,
+      psgTotal,
+      opponentTotal,
       psgWins,
       comparisonMode,
       averageOnly,
