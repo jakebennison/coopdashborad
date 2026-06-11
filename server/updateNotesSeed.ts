@@ -4,6 +4,16 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061117,
+    date: '2026-06-11',
+    title: 'Welcome screen on app open only',
+    body: `The welcome intro shows when you open the tool, not on the dashboard itself.
+
+• Full CO-OP 26 welcome card with loading bar and Click to enter
+• Recent form W/D/L letters tile behind the welcome and wrap as your record grows
+• Dismisses into the normal dashboard for the rest of the browser session`,
+  },
+  {
     id: 2026061116,
     date: '2026-06-11',
     title: 'Welcome screen with live form background',
