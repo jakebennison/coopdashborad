@@ -27,7 +27,7 @@ import {
   type ComparisonRow,
   type TrendDataPoint,
 } from './analysisUtils'
-import { statsCategories, type StatsCategory } from './statsCategories'
+import { statsCategories, insightStatsCategories, isInsightStatsCategory, matchStatsCategories, type StatsCategory } from './statsCategories'
 import type { Match } from './types'
 import { getThemeColors, type Theme } from './theme'
 import {
@@ -451,8 +451,7 @@ function StreakAnalysisPanel({ matches }: { matches: Match[] }) {
   return (
     <div className="grid gap-6">
       <div className="rounded-2xl border border-ink bg-soft px-4 py-4">
-        <h4 className={headingClass}>Streaks</h4>
-        <p className="mt-1 text-sm text-muted">
+        <p className="text-sm text-muted">
           Current form runs update live. Historical lists only include unbeaten runs of{' '}
           {MIN_NOTABLE_STREAK_LENGTH}+ games and winning streaks of {MIN_NOTABLE_STREAK_LENGTH}+ wins,
           plus any active run while you build it up.
@@ -710,7 +709,6 @@ function XgAnalysisPanel({
   return (
     <div className="grid gap-6">
       <div className="rounded-2xl border border-ink bg-soft px-4 py-4">
-        <h4 className={headingClass}>xG vs Goals</h4>
         <p className="mt-1 text-sm text-muted">
           Compare actual goals with expected goals across {analysis.xgMatchCount} logged matches
           {analysis.bothXgMatchCount ? ` · ${analysis.bothXgMatchCount} with both teams' xG` : ''}.
@@ -978,6 +976,8 @@ export default function DetailedStats({
   const hasStatData = statMatches.length > 0
   const hasRecordData = recordMatches.length > 0
   const [activeIndex, setActiveIndex] = useState(0)
+  const activeCategory = statsCategories[activeIndex] ?? statsCategories[0]
+  const isInsightPage = isInsightStatsCategory(activeCategory)
   const carouselRef = useRef<HTMLDivElement>(null)
   const touchStartX = useRef<number | null>(null)
 
@@ -1019,32 +1019,66 @@ export default function DetailedStats({
   return (
     <section className={`${panelClass} overflow-hidden`}>
       <div className="border-b border-ink px-6 py-5">
-        <p className="record-display-font text-xs font-bold uppercase text-muted">Match stats breakdown</p>
-        <h3 className={`${headingClass} mt-1`}>Stat analysis</h3>
+        <p className="record-display-font text-xs font-bold uppercase text-muted">
+          {isInsightPage ? 'Insights' : 'Match stats breakdown'}
+        </p>
+        <h3 className={`${headingClass} mt-1`}>{isInsightPage ? activeCategory.label : 'Stat analysis'}</h3>
         <p className="mt-1 text-sm text-muted">
-          {scopeLabel ??
-            (hasStatData
-              ? `${statMatches.length} logged matches · averages per match, PSG vs opposition`
-              : `${recordMatches.length} logged matches · streak analysis available`)}
+          {isInsightPage
+            ? activeCategory.description
+            : scopeLabel ??
+              (hasStatData
+                ? `${statMatches.length} logged matches · averages per match, PSG vs opposition`
+                : `${recordMatches.length} logged matches · streak analysis available`)}
         </p>
       </div>
 
-      {hasStatData ? <StatsOverview matches={statMatches} /> : null}
+      {hasStatData && !isInsightPage ? <StatsOverview matches={statMatches} /> : null}
 
       <div className="border-b border-ink px-4 py-3">
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {statsCategories.map((category, index) => (
-            <button
-              key={category.id}
-              type="button"
-              onClick={() => goTo(index)}
-              className={`shrink-0 transition ${
-                index === activeIndex ? tabActiveClass : tabInactiveClass
-              }`}
-            >
-              {category.label}
-            </button>
-          ))}
+        <div className="grid gap-3">
+          <div>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted">Match stats</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {matchStatsCategories.map((category) => {
+                const index = statsCategories.findIndex((entry) => entry.id === category.id)
+
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => goTo(index)}
+                    className={`shrink-0 transition ${
+                      index === activeIndex ? tabActiveClass : tabInactiveClass
+                    }`}
+                  >
+                    {category.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted">Insights</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {insightStatsCategories.map((category) => {
+                const index = statsCategories.findIndex((entry) => entry.id === category.id)
+
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    onClick={() => goTo(index)}
+                    className={`shrink-0 transition ${
+                      index === activeIndex ? tabActiveClass : tabInactiveClass
+                    }`}
+                  >
+                    {category.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
       </div>
 

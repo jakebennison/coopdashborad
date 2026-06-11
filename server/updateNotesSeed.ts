@@ -4,6 +4,16 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061120,
+    date: '2026-06-11',
+    title: 'Insights tabs for Streaks and xG vs Goals',
+    body: `Streaks and xG vs Goals now sit together as dedicated insight pages in stat analysis.
+
+• Separate Insights tab row next to match stat categories
+• Each insight page gets its own header and full-width layout
+• Match averages overview hidden on Streaks and xG vs Goals pages`,
+  },
+  {
     id: 2026061119,
     date: '2026-06-11',
     title: 'xG vs Goals stat analysis tab',

@@ -25,7 +25,7 @@ export type StatsCategory = {
   gaugeStats?: StatFieldConfig[]
 }
 
-export const statsCategories: StatsCategory[] = [
+export const matchStatsCategories: StatsCategory[] = [
   {
     id: 'summary',
     label: 'Summary',
@@ -97,6 +97,9 @@ export const statsCategories: StatsCategory[] = [
       { key: 'yellowCards', label: 'Yellow cards' },
     ],
   },
+]
+
+export const insightStatsCategories: StatsCategory[] = [
   {
     id: 'streaks',
     label: 'Streaks',
@@ -110,3 +113,8 @@ export const statsCategories: StatsCategory[] = [
     stats: [],
   },
 ]
+
+export const statsCategories: StatsCategory[] = [...matchStatsCategories, ...insightStatsCategories]
+
+export const isInsightStatsCategory = (category: StatsCategory) =>
+  category.id === 'streaks' || category.id === 'xg'
