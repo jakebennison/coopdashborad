@@ -59,9 +59,8 @@ import {
   RecordOdometerStack,
 } from './OverallRecordDisplay'
 import UpdateTimeline from './UpdateTimeline'
-import WelcomeIntro from './WelcomeIntro'
+import WelcomeBackdrop from './WelcomeBackdrop'
 import { applyTheme, getThemeColors, readTheme, type Theme } from './theme'
-import { hasSeenWelcomeIntro } from './welcomeIntroStorage'
 
 const SEASON_CLUBS = ['Real Madrid', 'Manchester United', 'PSG'] as const
 import {
@@ -148,7 +147,7 @@ function App() {
   const [view, setView] = useState<View>('dashboard')
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null)
   const [theme, setTheme] = useState<Theme>(() => readTheme())
-  const [showWelcomeIntro, setShowWelcomeIntro] = useState(() => !hasSeenWelcomeIntro())
+  const formMatches = useMemo(() => getFormTickerMatches(matches), [matches])
 
   useEffect(() => {
     let cancelled = false
@@ -300,16 +299,9 @@ function App() {
               : 'Match detail'
 
   return (
-    <div
-      className={`min-h-screen ${showWelcomeIntro ? 'overflow-hidden bg-[#101010]' : 'bg-page text-ink'}`}
-    >
-      {showWelcomeIntro ? <WelcomeIntro onComplete={() => setShowWelcomeIntro(false)} /> : null}
-      <div
-        className={`mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row ${
-          showWelcomeIntro ? 'invisible' : ''
-        }`}
-        aria-hidden={showWelcomeIntro}
-      >
+    <div className="relative min-h-screen text-ink">
+      <WelcomeBackdrop formMatches={formMatches} />
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row">
         <aside className="card m-4 flex shrink-0 flex-col gap-8 p-5 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:self-start">
           <button type="button" className="text-left" onClick={() => setView('dashboard')}>
             <div className="flex items-center gap-3">

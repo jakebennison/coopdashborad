@@ -4,6 +4,17 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061115,
+    date: '2026-06-11',
+    title: 'Permanent welcome backdrop with form letters',
+    body: `The one-time welcome screen is now a permanent background across the app.
+
+• CO-OP 26 Dashboard branding stays as a subtle watermark
+• Recent form W/D/L letters tile across the background and wrap at the screen edge
+• Letters update automatically as new matches are logged
+• Removed click-to-enter and first-visit only gating`,
+  },
+  {
     id: 2026061114,
     date: '2026-06-11',
     title: 'Longest winning run goals',

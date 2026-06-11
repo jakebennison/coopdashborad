@@ -1,0 +1,20 @@
+---
+description: Commit and push to origin when the user requests a code change
+alwaysApply: true
+---
+
+# Push on change
+
+When the user asks for a code or content change in this project:
+
+1. Implement the requested change.
+2. Commit with a concise message that explains why.
+3. Push to `origin` on the current branch without waiting for a separate push request.
+
+Do not skip push because the user did not say "push" explicitly if they asked for a change.
+
+Still ask before:
+- Force push, hard reset, or other destructive git operations
+- Committing files that likely contain secrets
+
+If there is nothing to commit after the work, say so instead of creating an empty commit.
