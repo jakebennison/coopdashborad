@@ -531,7 +531,7 @@ function Dashboard({
   return (
     <main className="grid gap-6">
       <section className={`${panelClass} p-6`}>
-        <div className="dashboard-record-header grid grid-cols-1 gap-6 xl:grid-cols-[auto_auto_minmax(9.5rem,10rem)_15rem] xl:items-start xl:gap-x-10 xl:gap-y-0">
+        <div className="dashboard-record-header grid grid-cols-1 gap-8 xl:grid-cols-[auto_auto_minmax(9.5rem,10rem)_15rem] xl:items-start xl:gap-x-12 xl:gap-y-0">
           <RecordHeaderLabel />
           <div ref={odometerRef} className="shrink-0">
             <RecordOdometerStack wins={record.W} draws={record.D} losses={record.L} />
