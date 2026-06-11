@@ -4,6 +4,16 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061116,
+    date: '2026-06-11',
+    title: 'Welcome screen with live form background',
+    body: `Restored the original full welcome design on the dashboard with form letters behind it.
+
+• Exact CO-OP 26 welcome card styling, chips, and progress bar
+• Recent form W/D/L tiles wrap across the welcome background as matches are logged
+• Scroll down from the welcome screen into the dashboard panels`,
+  },
+  {
     id: 2026061115,
     date: '2026-06-11',
     title: 'Permanent welcome backdrop with form letters',

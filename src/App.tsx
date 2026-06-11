@@ -59,7 +59,7 @@ import {
   RecordOdometerStack,
 } from './OverallRecordDisplay'
 import UpdateTimeline from './UpdateTimeline'
-import WelcomeBackdrop from './WelcomeBackdrop'
+import WelcomeStage from './WelcomeStage'
 import { applyTheme, getThemeColors, readTheme, type Theme } from './theme'
 
 const SEASON_CLUBS = ['Real Madrid', 'Manchester United', 'PSG'] as const
@@ -299,9 +299,8 @@ function App() {
               : 'Match detail'
 
   return (
-    <div className="relative min-h-screen text-ink">
-      <WelcomeBackdrop formMatches={formMatches} />
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row">
+    <div className="min-h-screen bg-page text-ink">
+      <div className="mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row">
         <aside className="card m-4 flex shrink-0 flex-col gap-8 p-5 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:self-start">
           <button type="button" className="text-left" onClick={() => setView('dashboard')}>
             <div className="flex items-center gap-3">
@@ -353,7 +352,11 @@ function App() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col gap-6 px-4 pb-6 pt-4 lg:px-6 lg:pb-8 lg:pt-6">
-          <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <header
+            className={`flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between ${
+              view === 'dashboard' ? 'hidden' : ''
+            }`}
+          >
             <div>
               <p className="record-display-font text-xs font-bold uppercase text-muted">
                 {view === 'dashboard' ? 'Home' : pageTitle}
@@ -382,13 +385,16 @@ function App() {
           ) : null}
 
           {!matchesLoading && view === 'dashboard' && (
-            <Dashboard
-              matches={matches}
-              theme={theme}
-              onAdd={() => setView('add')}
-              onOpenMatch={openMatch}
-              onAddManualFormEntry={saveManualFormEntry}
-            />
+            <>
+              <WelcomeStage formMatches={formMatches} onLogMatch={() => setView('add')} />
+              <Dashboard
+                matches={matches}
+                theme={theme}
+                onAdd={() => setView('add')}
+                onOpenMatch={openMatch}
+                onAddManualFormEntry={saveManualFormEntry}
+              />
+            </>
           )}
           {!matchesLoading && view === 'stats' && (
             <DetailedStats
@@ -524,7 +530,8 @@ function Dashboard({
   }, [record.W, record.D, record.L])
 
   return (
-    <main className="grid gap-6">
+    <>
+      <main className="relative z-10 grid gap-6 rounded-t-[2rem] bg-page pt-6 shadow-[0_-24px_48px_rgb(16_16_16_/_0.45)]">
       <section className={`${panelClass} p-6`}>
         <div className="dashboard-record-header grid grid-cols-1 gap-8 xl:grid-cols-[auto_auto_minmax(9.5rem,10rem)_15rem] xl:items-start xl:gap-x-12 xl:gap-y-0">
           <RecordHeaderLabel />
@@ -761,6 +768,7 @@ function Dashboard({
         </div>
       </section>
     </main>
+    </>
   )
 }
 
