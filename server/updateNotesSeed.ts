@@ -4,6 +4,16 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061118,
+    date: '2026-06-11',
+    title: 'Smoother welcome form letter entry',
+    body: `Background form results on the welcome screen now ease in more gently.
+
+• Each W/D/L tile fades in with a soft scale and upward motion
+• Letters appear in a staggered sequence instead of popping in all at once
+• Respects reduced motion preferences`,
+  },
+  {
     id: 2026061117,
     date: '2026-06-11',
     title: 'Welcome screen on app open only',
