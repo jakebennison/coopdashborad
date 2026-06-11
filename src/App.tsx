@@ -52,7 +52,11 @@ import {
   getMatchScreenshotUrl,
   updateMatchRemote,
 } from './matchesApi'
-import OverallRecordDisplay, { AnimatedCountUp } from './OverallRecordDisplay'
+import {
+  AnimatedCountUp,
+  RecordHeaderLabel,
+  RecordOdometerStack,
+} from './OverallRecordDisplay'
 import UpdateTimeline from './UpdateTimeline'
 import WelcomeIntro from './WelcomeIntro'
 import { applyTheme, getThemeColors, readTheme, type Theme } from './theme'
@@ -500,51 +504,70 @@ function Dashboard({
   const longestUnbeatenRun = useMemo(() => getLongestUnbeatenRun(matches), [matches])
   const longestWinningRun = useMemo(() => getLongestWinningRun(matches), [matches])
   const trackerRecord = useMemo(() => getTrackerRecord(matches), [matches])
+  const odometerRef = useRef<HTMLDivElement>(null)
+  const [metricsHeight, setMetricsHeight] = useState<number | undefined>(undefined)
   const [hoveredGoalIndex, setHoveredGoalIndex] = useState<number | null>(null)
   const hoveredGoalPoint = hoveredGoalIndex != null ? (chartData[hoveredGoalIndex] ?? null) : null
+
+  useEffect(() => {
+    const node = odometerRef.current
+    if (!node) return
+
+    const syncMetricsHeight = () => {
+      setMetricsHeight(node.getBoundingClientRect().height)
+    }
+
+    syncMetricsHeight()
+    const observer = new ResizeObserver(syncMetricsHeight)
+    observer.observe(node)
+    window.addEventListener('resize', syncMetricsHeight)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', syncMetricsHeight)
+    }
+  }, [record.W, record.D, record.L])
 
   return (
     <main className="grid gap-6">
       <section className={`${panelClass} p-6`}>
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between xl:gap-10">
-          <div className="min-w-0 shrink-0">
-            <OverallRecordDisplay
-              wins={record.W}
-              draws={record.D}
-              losses={record.L}
-              metrics={
-                <>
-                  <DashboardMetricBox label="Win rate">
-                    <AnimatedCountUp
-                      value={winRate}
-                      color={winRateColor(winRate)}
-                      suffix="%"
-                      delayMs={500}
-                      className="mt-0.5 text-lg sm:text-xl"
-                    />
-                  </DashboardMetricBox>
-                  <DashboardMetricBox label="Matches played">
-                    <AnimatedCountUp
-                      value={total}
-                      color="var(--color-ink)"
-                      delayMs={640}
-                      className="mt-0.5 text-lg sm:text-xl"
-                    />
-                  </DashboardMetricBox>
-                  <DashboardMetricBox label="W/L Ratio">
-                    <AnimatedCountUp
-                      value={wlRatio}
-                      color={wlRatioColor}
-                      signed
-                      delayMs={780}
-                      className="mt-0.5 text-lg sm:text-xl"
-                    />
-                  </DashboardMetricBox>
-                </>
-              }
-            />
+        <div className="dashboard-record-header grid grid-cols-1 gap-6 xl:grid-cols-[auto_auto_minmax(9.5rem,10rem)_15rem] xl:items-start xl:gap-x-10 xl:gap-y-0">
+          <RecordHeaderLabel />
+          <div ref={odometerRef} className="shrink-0">
+            <RecordOdometerStack wins={record.W} draws={record.D} losses={record.L} />
           </div>
-          <div className="w-full max-w-[15rem] shrink-0 xl:w-[15rem]">
+          <div
+            className="dashboard-record-metrics grid min-h-0 grid-rows-3 gap-2"
+            style={metricsHeight ? { height: metricsHeight } : undefined}
+          >
+            <DashboardMetricBox label="Win rate">
+              <AnimatedCountUp
+                value={winRate}
+                color={winRateColor(winRate)}
+                suffix="%"
+                delayMs={500}
+                className="mt-0.5 text-lg sm:text-xl"
+              />
+            </DashboardMetricBox>
+            <DashboardMetricBox label="Matches played">
+              <AnimatedCountUp
+                value={total}
+                color="var(--color-ink)"
+                delayMs={640}
+                className="mt-0.5 text-lg sm:text-xl"
+              />
+            </DashboardMetricBox>
+            <DashboardMetricBox label="W/L Ratio">
+              <AnimatedCountUp
+                value={wlRatio}
+                color={wlRatioColor}
+                signed
+                delayMs={780}
+                className="mt-0.5 text-lg sm:text-xl"
+              />
+            </DashboardMetricBox>
+          </div>
+          <div className="w-full shrink-0 xl:w-[15rem]">
             <SeasonClubsPlayed clubs={SEASON_CLUBS} />
           </div>
         </div>
@@ -1679,7 +1702,7 @@ function MatchDetail({
 
 function DashboardMetricBox({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className={`${innerBoxClass} flex h-full min-h-0 flex-col justify-center px-3 py-2`}>
+    <div className={`${innerBoxClass} flex h-full min-h-0 flex-col justify-center px-3 py-1.5`}>
       <p className="record-display-font text-[10px] font-bold uppercase leading-tight">{label}</p>
       {children}
     </div>

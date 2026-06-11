@@ -131,6 +131,10 @@ textarea {
   margin-top: -0.14em;
 }
 
+.dashboard-record-metrics {
+  align-self: stretch;
+}
+
 .record-display-font {
   font-weight: 700;
   letter-spacing: -0.045em;
