@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="PSG football">
+  <rect width="32" height="32" rx="8" fill="#004170"/>
+  <circle cx="16" cy="16" r="11" fill="#FFFFFF"/>
+  <polygon fill="#DA291C" points="16,7 19.6,9.6 18.2,13.7 13.8,13.7 12.4,9.6"/>
+  <path fill="#004170" d="M12.4,9.6 7.8,12.1 9.2,16.6 13.8,13.7Z"/>
+  <path fill="#004170" d="M19.6,9.6 24.2,12.1 22.8,16.6 18.2,13.7Z"/>
+  <path fill="#004170" d="M9.2,16.6 11.1,21.4 16,22.8 13.8,13.7Z"/>
+  <path fill="#004170" d="M22.8,16.6 20.9,21.4 16,22.8 18.2,13.7Z"/>
+  <path fill="#FFB547" d="M11.1,21.4 16,22.8 20.9,21.4 16,19.8Z"/>
+</svg>
