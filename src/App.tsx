@@ -651,7 +651,7 @@ function Dashboard({
                     type="monotone"
                     dataKey="scored"
                     name="Goals scored"
-                    stroke={chartColors.ink}
+                    stroke="#05CD99"
                     strokeWidth={2.5}
                     style={{ pointerEvents: 'none' }}
                     dot={(props) => {
@@ -667,7 +667,7 @@ function Dashboard({
                           cx={props.cx}
                           cy={props.cy}
                           r={radius}
-                          fill={chartColors.ink}
+                          fill="#05CD99"
                           stroke="var(--color-card)"
                           strokeWidth={2}
                           style={{ cursor: 'pointer', pointerEvents: 'all' }}

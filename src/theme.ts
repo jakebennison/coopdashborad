@@ -34,11 +34,23 @@ export const readThemeColor = (variable: string, fallback: string) => {
   return value || fallback
 }
 
-export const getThemeColors = (_theme: Theme) => ({
-  ink: readThemeColor('--color-ink', '#101010'),
-  muted: readThemeColor('--color-muted', '#8f9bb3'),
-  chartMuted: readThemeColor('--color-chart-muted', '#a3aed0'),
-  card: readThemeColor('--color-card', '#ffffff'),
-  border: readThemeColor('--color-border', '#101010'),
-  soft: readThemeColor('--color-accent-soft', '#f3f3f3'),
-})
+const THEME_COLORS = {
+  day: {
+    ink: '#101010',
+    muted: '#8f9bb3',
+    chartMuted: '#a3aed0',
+    card: '#ffffff',
+    border: '#101010',
+    soft: '#f3f3f3',
+  },
+  night: {
+    ink: '#f5f5f5',
+    muted: '#a8b0c0',
+    chartMuted: '#8f9bb3',
+    card: '#171717',
+    border: '#f5f5f5',
+    soft: '#222222',
+  },
+} as const
+
+export const getThemeColors = (theme: Theme) => THEME_COLORS[theme]
