@@ -200,6 +200,32 @@ function App() {
   }, [theme])
 
   useEffect(() => {
+    if (view !== 'detail' || selectedMatchId == null) return
+
+    let cancelled = false
+
+    const refreshMatches = () => {
+      fetchMatches()
+        .then((loaded) => {
+          if (!cancelled) setMatches(loaded)
+        })
+        .catch(() => {
+          // Keep current state if background refresh fails.
+        })
+    }
+
+    refreshMatches()
+    const interval = window.setInterval(refreshMatches, 15000)
+    window.addEventListener('focus', refreshMatches)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refreshMatches)
+    }
+  }, [view, selectedMatchId])
+
+  useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [view, selectedMatchId])
 
@@ -266,14 +292,19 @@ function App() {
   }
 
   const saveMatchComments = async (id: number, comments: Match['comments']) => {
-    const nextMatches = updateMatchComments(matches, id, comments ?? [])
-    const updated = nextMatches.find((match) => match.id === id)
-    if (!updated) return
+    let payload: Match | undefined
 
-    setMatches(nextMatches)
+    setMatches((current) => {
+      const nextMatches = updateMatchComments(current, id, comments ?? [])
+      payload = nextMatches.find((match) => match.id === id)
+      return nextMatches
+    })
+
+    if (!payload) return
 
     try {
-      await updateMatchRemote(updated)
+      const saved = await updateMatchRemote(payload)
+      setMatches((current) => current.map((match) => (match.id === id ? saved : match)))
       setMatchesError(null)
     } catch (error) {
       setMatchesError(error instanceof Error ? error.message : 'Could not save comments.')

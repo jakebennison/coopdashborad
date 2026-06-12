@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Match } from '../src/types'
+import { mergeMatchComments } from '../src/commentMerge'
 import { initDatabase, isDatabaseConfigured, withDbClient } from './db'
 
 const DATA_DIR = path.join(process.cwd(), '.data')
@@ -98,6 +99,22 @@ export const listMatches = async (): Promise<Match[]> => {
   return readFileStore()
 }
 
+export const getMatchById = async (id: number): Promise<Match | null> => {
+  await ensureMatchesStore()
+
+  if (storageMode === 'postgres') {
+    const result = await withDbClient((client) =>
+      client.query('SELECT payload FROM matches WHERE id = $1', [id]),
+    )
+    if (!result.rowCount) return null
+    return normalizeMatch(result.rows[0].payload as Match)
+  }
+
+  const matches = await readFileStore()
+  const match = matches.find((entry) => entry.id === id)
+  return match ?? null
+}
+
 export const createMatch = async (match: Match): Promise<Match> => {
   await ensureMatchesStore()
   const normalized = normalizeMatch(match)
@@ -127,7 +144,14 @@ export const createMatch = async (match: Match): Promise<Match> => {
 
 export const updateMatch = async (match: Match): Promise<Match | null> => {
   await ensureMatchesStore()
-  const normalized = normalizeMatch(match)
+  const existing = await getMatchById(match.id)
+  if (!existing) return null
+
+  const mergedMatch: Match = {
+    ...match,
+    comments: mergeMatchComments(existing.comments ?? [], match.comments ?? []),
+  }
+  const normalized = normalizeMatch(mergedMatch)
 
   if (storageMode === 'postgres') {
     const result = await withDbClient((client) =>

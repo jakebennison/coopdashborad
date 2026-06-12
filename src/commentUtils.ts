@@ -1,5 +1,7 @@
 import type { Match, MatchComment, MatchCommentReply } from './types'
 
+export { mergeMatchComments } from './commentMerge'
+
 export const COMMENT_AUTHOR_STORAGE_KEY = 'psg-coop-comment-author'
 export const DEFAULT_COMMENT_AUTHOR = 'Co-op player'
 

@@ -4,6 +4,16 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061221,
+    date: '2026-06-12',
+    title: 'Multiple match comments now persist for everyone',
+    body: `Comments no longer overwrite each other when more than one co-op player leaves a note.
+
+• New comments merge with existing ones instead of replacing the thread
+• Match detail refreshes in the background so everyone sees the latest comments
+• Replies and likes stay attached to their comment threads`,
+  },
+  {
     id: 2026061220,
     date: '2026-06-12',
     title: 'Insights tabs for Streaks and xG vs Goals',
