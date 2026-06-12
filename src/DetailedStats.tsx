@@ -588,7 +588,15 @@ function XgComparisonChart({
 }: {
   title: string
   description: string
-  rows: Array<{ label: string; psg: number; opponent: number; psgColor?: string; opponentColor?: string }>
+  rows: Array<{
+    label: string
+    psg: number
+    opponent: number
+    psgLabel?: string
+    secondLabel?: string
+    psgColor?: string
+    opponentColor?: string
+  }>
   colors: ReturnType<typeof getThemeColors>
 }) {
   return (
@@ -597,9 +605,11 @@ function XgComparisonChart({
       <p className="mt-1 text-xs text-muted">{description}</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {rows.map((row) => {
+          const psgLabel = row.psgLabel ?? 'PSG'
+          const secondLabel = row.secondLabel ?? 'xG'
           const barData = [
-            { team: 'PSG', value: row.psg, color: row.psgColor ?? PSG_COLOR },
-            { team: 'Opposition', value: row.opponent, color: row.opponentColor ?? OPP_COLOR },
+            { team: psgLabel, value: row.psg, color: row.psgColor ?? PSG_COLOR },
+            { team: secondLabel, value: row.opponent, color: row.opponentColor ?? OPP_COLOR },
           ]
           const yAxis = getYAxisConfig(row.psg, row.opponent, '', 1, 'xG')
 
@@ -822,6 +832,8 @@ function XgAnalysisPanel({
                   label: 'PSG defence',
                   psg: analysis.concededTotal,
                   opponent: analysis.xgAgainstTotal,
+                  psgLabel: 'Conceded',
+                  secondLabel: 'xG against',
                   psgColor: '#EE5D50',
                   opponentColor: '#FFB547',
                 },
