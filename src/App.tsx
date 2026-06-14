@@ -1767,6 +1767,8 @@ function FormTicker({
   const pageSize = 20
   const carouselRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(null)
+  const isDraggingRef = useRef(false)
+  const scrollSnapTimeoutRef = useRef<number | null>(null)
   const [recordsOpen, setRecordsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const pages = useMemo(() => {
@@ -1780,21 +1782,73 @@ function FormTicker({
   }, [matches])
   const [activePage, setActivePage] = useState(0)
 
+  const getPageIndexFromScroll = (scrollLeft: number, width: number) =>
+    Math.max(0, Math.min(pages.length - 1, Math.round(scrollLeft / width)))
+
+  const scrollToPage = (pageIndex: number, behavior: ScrollBehavior = 'auto') => {
+    const carousel = carouselRef.current
+    if (!carousel) return
+
+    const width = carousel.clientWidth
+    if (!width) return
+
+    const nextPage = Math.max(0, Math.min(pages.length - 1, pageIndex))
+    carousel.scrollTo({ left: nextPage * width, behavior })
+    setActivePage(nextPage)
+  }
+
+  const snapToNearestPage = (behavior: ScrollBehavior = 'auto') => {
+    if (isDraggingRef.current) return
+
+    const carousel = carouselRef.current
+    if (!carousel || pages.length <= 1) return
+
+    const width = carousel.clientWidth
+    if (!width) return
+
+    scrollToPage(getPageIndexFromScroll(carousel.scrollLeft, width), behavior)
+  }
+
   useEffect(() => {
     setActivePage(0)
+    carouselRef.current?.scrollTo({ left: 0, behavior: 'auto' })
   }, [matches.length])
+
+  useEffect(() => {
+    isDraggingRef.current = isDragging
+  }, [isDragging])
+
+  useEffect(() => {
+    return () => {
+      if (scrollSnapTimeoutRef.current != null) {
+        window.clearTimeout(scrollSnapTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const endDrag = (_event: React.PointerEvent<HTMLDivElement>) => {
     const carousel = carouselRef.current
     const drag = dragRef.current
     if (!carousel || !drag) return
 
+    const width = carousel.clientWidth
+    const scrollLeft = carousel.scrollLeft
+    const targetPage =
+      width > 0 ? getPageIndexFromScroll(scrollLeft, width) : activePage
+
     if (carousel.hasPointerCapture(drag.pointerId)) {
       carousel.releasePointerCapture(drag.pointerId)
     }
 
     dragRef.current = null
+    isDraggingRef.current = false
     setIsDragging(false)
+
+    if (width > 0) {
+      window.requestAnimationFrame(() => {
+        scrollToPage(targetPage)
+      })
+    }
   }
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -1808,6 +1862,7 @@ function FormTicker({
       startX: event.clientX,
       startScrollLeft: carousel.scrollLeft,
     }
+    isDraggingRef.current = true
     setIsDragging(true)
     carousel.setPointerCapture(event.pointerId)
   }
@@ -1842,14 +1897,38 @@ function FormTicker({
             {pageLabel(activePage)}
             {pages.length > 1 ? ` · ${activePage + 1}/${pages.length}` : ''}
           </p>
+          {activePage > 0 ? (
+            <button
+              type="button"
+              onClick={() => scrollToPage(0, 'smooth')}
+              aria-label="Back to latest form"
+              title="Back to latest form"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink bg-card text-base text-muted transition hover:bg-soft hover:text-ink"
+            >
+              ↻
+            </button>
+          ) : null}
           <FormManualEntry onSubmit={onAddManualEntry} />
         </div>
       </div>
 
-      <p className="mb-3 px-1 text-xs font-medium text-muted sm:hidden">
-        {pageLabel(activePage)}
-        {pages.length > 1 ? ` · ${activePage + 1}/${pages.length}` : ''}
-      </p>
+      <div className="mb-3 flex items-center justify-between gap-2 px-1 sm:hidden">
+        <p className="text-xs font-medium text-muted">
+          {pageLabel(activePage)}
+          {pages.length > 1 ? ` · ${activePage + 1}/${pages.length}` : ''}
+        </p>
+        {activePage > 0 ? (
+          <button
+            type="button"
+            onClick={() => scrollToPage(0, 'smooth')}
+            aria-label="Back to latest form"
+            title="Back to latest form"
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-ink bg-card text-base text-muted transition hover:bg-soft hover:text-ink"
+          >
+            ↻
+          </button>
+        ) : null}
+      </div>
 
       <div
         ref={carouselRef}
@@ -1863,12 +1942,20 @@ function FormTicker({
         onScroll={(event) => {
           const width = event.currentTarget.clientWidth
           if (!width) return
-          const index = Math.round(event.currentTarget.scrollLeft / width)
+          const index = getPageIndexFromScroll(event.currentTarget.scrollLeft, width)
           if (index !== activePage) setActivePage(index)
+
+          if (scrollSnapTimeoutRef.current != null) {
+            window.clearTimeout(scrollSnapTimeoutRef.current)
+          }
+
+          scrollSnapTimeoutRef.current = window.setTimeout(() => {
+            snapToNearestPage()
+          }, 120)
         }}
       >
         {pages.map((pageMatches, pageIndex) => (
-          <div key={pageIndex} className="w-full shrink-0 snap-center px-1">
+          <div key={pageIndex} className="w-full shrink-0 snap-start px-1">
             <div className="grid grid-cols-10 gap-1.5 sm:grid-cols-20">
               {Array.from({ length: pageSize }, (_, index) => {
                 const match = pageMatches[index] ?? null
