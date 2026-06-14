@@ -1749,6 +1749,42 @@ function DashboardMetricBox({ label, children }: { label: string; children: Reac
   )
 }
 
+function FormScrollScrubber({
+  pageCount,
+  activePage,
+  pageLabel,
+  onChange,
+}: {
+  pageCount: number
+  activePage: number
+  pageLabel: string
+  onChange: (index: number) => void
+}) {
+  const disabled = pageCount <= 1
+
+  return (
+    <div className="rounded-xl border border-ink bg-soft/60 px-3 py-3">
+      <div className="mb-2 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted">
+        <span>Drag to scroll form</span>
+        <span>{pageLabel}</span>
+      </div>
+      <input
+        type="range"
+        min={0}
+        max={Math.max(0, pageCount - 1)}
+        step={1}
+        value={activePage}
+        disabled={disabled}
+        aria-label="Scroll recent form history"
+        aria-valuetext={pageLabel}
+        onChange={(event) => onChange(Number(event.target.value))}
+        onInput={(event) => onChange(Number(event.currentTarget.value))}
+        className="form-ticker-scrubber w-full"
+      />
+    </div>
+  )
+}
+
 function FormTicker({
   matches,
   unbeatenStreak,
@@ -1839,7 +1875,7 @@ function FormTicker({
 
       <div
         ref={carouselRef}
-        className="relative flex snap-x snap-mandatory overflow-x-auto scroll-smooth"
+        className="form-ticker-carousel relative flex snap-x snap-mandatory overflow-x-auto scroll-smooth"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onScroll={(event) => {
@@ -1870,39 +1906,48 @@ function FormTicker({
         ))}
       </div>
 
-      {pages.length > 1 ? (
-        <div className="relative mt-3 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => goTo(activePage + 1)}
-            disabled={activePage === pages.length - 1}
-            className="record-display-font rounded-lg border border-ink bg-card px-3 py-1.5 text-xs transition hover:bg-card disabled:opacity-40"
-          >
-            ← Older
-          </button>
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {pages.map((_, index) => (
-              <button
-                key={index}
-                type="button"
-                aria-label={`Show form page ${index + 1}`}
-                onClick={() => goTo(index)}
-                className={`h-2 rounded-full transition ${
-                  index === activePage ? 'w-5 bg-[var(--color-ink)]' : 'w-2 bg-[var(--color-ink)]/20'
-                }`}
-              />
-            ))}
+      <div className="mt-4 grid gap-3 px-1">
+        <FormScrollScrubber
+          pageCount={pages.length}
+          activePage={activePage}
+          pageLabel={pageLabel(activePage)}
+          onChange={goTo}
+        />
+
+        {pages.length > 1 ? (
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => goTo(activePage - 1)}
+              disabled={activePage === 0}
+              className="record-display-font rounded-lg border border-ink bg-card px-3 py-1.5 text-xs transition hover:bg-card disabled:opacity-40"
+            >
+              Newer →
+            </button>
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {pages.map((_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  aria-label={`Show form page ${index + 1}`}
+                  onClick={() => goTo(index)}
+                  className={`h-2 rounded-full transition ${
+                    index === activePage ? 'w-5 bg-[var(--color-ink)]' : 'w-2 bg-[var(--color-ink)]/20'
+                  }`}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => goTo(activePage + 1)}
+              disabled={activePage === pages.length - 1}
+              className="record-display-font rounded-lg border border-ink bg-card px-3 py-1.5 text-xs transition hover:bg-card disabled:opacity-40"
+            >
+              ← Older
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => goTo(activePage - 1)}
-            disabled={activePage === 0}
-            className="record-display-font rounded-lg border border-ink bg-card px-3 py-1.5 text-xs transition hover:bg-card disabled:opacity-40"
-          >
-            Newer →
-          </button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       <div className="relative mt-4 overflow-hidden rounded-xl border border-ink">
         <StreakRunBox label="Current unbeaten streak" stats={unbeatenStreak} />

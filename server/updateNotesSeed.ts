@@ -4,6 +4,16 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061222,
+    date: '2026-06-12',
+    title: 'Recent form scroll scrubber',
+    body: `Easier browsing through older form results on the dashboard.
+
+• Drag scrubber sits below the form tiles without overlapping them
+• Newer and Older navigation buttons swapped to match scroll direction
+• Native carousel scrollbar hidden in favour of the dedicated drag control`,
+  },
+  {
     id: 2026061221,
     date: '2026-06-12',
     title: 'Multiple match comments now persist for everyone',
