@@ -4,16 +4,6 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
-    id: 2026061233,
-    date: '2026-06-12',
-    title: 'Fireworks at every 100 wins',
-    body: `The overall record now celebrates century win milestones on the dashboard.
-
-• Fireworks burst around the wins total at 100, 200, 300, and so on
-• Animation plays after the record count-up finishes
-• Each milestone only celebrates once until the next hundred is reached`,
-  },
-  {
     id: 2026061232,
     date: '2026-06-12',
     title: 'Cleaner dashboard update alert',
