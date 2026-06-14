@@ -4,6 +4,16 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061223,
+    date: '2026-06-12',
+    title: 'Drag recent form tiles directly',
+    body: `Recent form now scrolls by dragging the result tiles themselves.
+
+• Removed the separate drag bar and Older/Newer buttons
+• Click and drag the tile row to browse older form pages
+• Snap scrolling still settles on each page after you release`,
+  },
+  {
     id: 2026061222,
     date: '2026-06-12',
     title: 'Recent form scroll scrubber',

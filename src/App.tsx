@@ -1749,42 +1749,6 @@ function DashboardMetricBox({ label, children }: { label: string; children: Reac
   )
 }
 
-function FormScrollScrubber({
-  pageCount,
-  activePage,
-  pageLabel,
-  onChange,
-}: {
-  pageCount: number
-  activePage: number
-  pageLabel: string
-  onChange: (index: number) => void
-}) {
-  const disabled = pageCount <= 1
-
-  return (
-    <div className="rounded-xl border border-ink bg-soft/60 px-3 py-3">
-      <div className="mb-2 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted">
-        <span>Drag to scroll form</span>
-        <span>{pageLabel}</span>
-      </div>
-      <input
-        type="range"
-        min={0}
-        max={Math.max(0, pageCount - 1)}
-        step={1}
-        value={activePage}
-        disabled={disabled}
-        aria-label="Scroll recent form history"
-        aria-valuetext={pageLabel}
-        onChange={(event) => onChange(Number(event.target.value))}
-        onInput={(event) => onChange(Number(event.currentTarget.value))}
-        className="form-ticker-scrubber w-full"
-      />
-    </div>
-  )
-}
-
 function FormTicker({
   matches,
   unbeatenStreak,
@@ -1802,8 +1766,9 @@ function FormTicker({
 }) {
   const pageSize = 20
   const carouselRef = useRef<HTMLDivElement>(null)
-  const touchStartX = useRef<number | null>(null)
+  const dragRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(null)
   const [recordsOpen, setRecordsOpen] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
   const pages = useMemo(() => {
     const result: Match[][] = []
 
@@ -1819,27 +1784,40 @@ function FormTicker({
     setActivePage(0)
   }, [matches.length])
 
-  const goTo = (index: number) => {
-    const next = Math.max(0, Math.min(pages.length - 1, index))
-    setActivePage(next)
-    carouselRef.current?.children[next]?.scrollIntoView({
-      behavior: 'smooth',
-      inline: 'center',
-      block: 'nearest',
-    })
-  }
+  const endDrag = (_event: React.PointerEvent<HTMLDivElement>) => {
+    const carousel = carouselRef.current
+    const drag = dragRef.current
+    if (!carousel || !drag) return
 
-  const handleTouchStart = (event: React.TouchEvent) => {
-    touchStartX.current = event.touches[0]?.clientX ?? null
-  }
-
-  const handleTouchEnd = (event: React.TouchEvent) => {
-    if (touchStartX.current === null) return
-    const delta = (event.changedTouches[0]?.clientX ?? 0) - touchStartX.current
-    if (Math.abs(delta) > 48) {
-      goTo(activePage + (delta < 0 ? 1 : -1))
+    if (carousel.hasPointerCapture(drag.pointerId)) {
+      carousel.releasePointerCapture(drag.pointerId)
     }
-    touchStartX.current = null
+
+    dragRef.current = null
+    setIsDragging(false)
+  }
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || pages.length <= 1) return
+
+    const carousel = carouselRef.current
+    if (!carousel) return
+
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: carousel.scrollLeft,
+    }
+    setIsDragging(true)
+    carousel.setPointerCapture(event.pointerId)
+  }
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const carousel = carouselRef.current
+    const drag = dragRef.current
+    if (!carousel || !drag || drag.pointerId !== event.pointerId) return
+
+    carousel.scrollLeft = drag.startScrollLeft - (event.clientX - drag.startX)
   }
 
   const pageLabel = (pageIndex: number) => {
@@ -1875,9 +1853,13 @@ function FormTicker({
 
       <div
         ref={carouselRef}
-        className="form-ticker-carousel relative flex snap-x snap-mandatory overflow-x-auto scroll-smooth"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        className={`form-ticker-carousel relative flex snap-x snap-mandatory overflow-x-auto ${
+          pages.length > 1 ? 'is-draggable' : ''
+        } ${isDragging ? 'is-dragging' : ''}`}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
         onScroll={(event) => {
           const width = event.currentTarget.clientWidth
           if (!width) return
@@ -1904,49 +1886,6 @@ function FormTicker({
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="mt-4 grid gap-3 px-1">
-        <FormScrollScrubber
-          pageCount={pages.length}
-          activePage={activePage}
-          pageLabel={pageLabel(activePage)}
-          onChange={goTo}
-        />
-
-        {pages.length > 1 ? (
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => goTo(activePage - 1)}
-              disabled={activePage === 0}
-              className="record-display-font rounded-lg border border-ink bg-card px-3 py-1.5 text-xs transition hover:bg-card disabled:opacity-40"
-            >
-              Newer →
-            </button>
-            <div className="flex flex-wrap justify-center gap-1.5">
-              {pages.map((_, index) => (
-                <button
-                  key={index}
-                  type="button"
-                  aria-label={`Show form page ${index + 1}`}
-                  onClick={() => goTo(index)}
-                  className={`h-2 rounded-full transition ${
-                    index === activePage ? 'w-5 bg-[var(--color-ink)]' : 'w-2 bg-[var(--color-ink)]/20'
-                  }`}
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => goTo(activePage + 1)}
-              disabled={activePage === pages.length - 1}
-              className="record-display-font rounded-lg border border-ink bg-card px-3 py-1.5 text-xs transition hover:bg-card disabled:opacity-40"
-            >
-              ← Older
-            </button>
-          </div>
-        ) : null}
       </div>
 
       <div className="relative mt-4 overflow-hidden rounded-xl border border-ink">
