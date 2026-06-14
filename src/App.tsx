@@ -1768,7 +1768,6 @@ function FormTicker({
   const carouselRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(null)
   const isDraggingRef = useRef(false)
-  const scrollSnapTimeoutRef = useRef<number | null>(null)
   const [recordsOpen, setRecordsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const pages = useMemo(() => {
@@ -1819,12 +1818,17 @@ function FormTicker({
   }, [isDragging])
 
   useEffect(() => {
-    return () => {
-      if (scrollSnapTimeoutRef.current != null) {
-        window.clearTimeout(scrollSnapTimeoutRef.current)
-      }
+    const carousel = carouselRef.current
+    if (!carousel || pages.length <= 1) return
+
+    const handleScrollEnd = () => {
+      if (isDraggingRef.current) return
+      snapToNearestPage()
     }
-  }, [])
+
+    carousel.addEventListener('scrollend', handleScrollEnd)
+    return () => carousel.removeEventListener('scrollend', handleScrollEnd)
+  }, [pages.length])
 
   const endDrag = (_event: React.PointerEvent<HTMLDivElement>) => {
     const carousel = carouselRef.current
@@ -1842,13 +1846,12 @@ function FormTicker({
 
     dragRef.current = null
     isDraggingRef.current = false
-    setIsDragging(false)
 
     if (width > 0) {
-      window.requestAnimationFrame(() => {
-        scrollToPage(targetPage)
-      })
+      carousel.scrollLeft = targetPage * width
     }
+    setActivePage(targetPage)
+    setIsDragging(false)
   }
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -1856,6 +1859,8 @@ function FormTicker({
 
     const carousel = carouselRef.current
     if (!carousel) return
+
+    event.preventDefault()
 
     dragRef.current = {
       pointerId: event.pointerId,
@@ -1872,6 +1877,7 @@ function FormTicker({
     const drag = dragRef.current
     if (!carousel || !drag || drag.pointerId !== event.pointerId) return
 
+    event.preventDefault()
     carousel.scrollLeft = drag.startScrollLeft - (event.clientX - drag.startX)
   }
 
@@ -1932,7 +1938,7 @@ function FormTicker({
 
       <div
         ref={carouselRef}
-        className={`form-ticker-carousel relative flex snap-x snap-mandatory overflow-x-auto ${
+        className={`form-ticker-carousel relative flex overflow-x-auto ${
           pages.length > 1 ? 'is-draggable' : ''
         } ${isDragging ? 'is-dragging' : ''}`}
         onPointerDown={handlePointerDown}
@@ -1940,22 +1946,16 @@ function FormTicker({
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
         onScroll={(event) => {
+          if (isDraggingRef.current) return
+
           const width = event.currentTarget.clientWidth
           if (!width) return
           const index = getPageIndexFromScroll(event.currentTarget.scrollLeft, width)
           if (index !== activePage) setActivePage(index)
-
-          if (scrollSnapTimeoutRef.current != null) {
-            window.clearTimeout(scrollSnapTimeoutRef.current)
-          }
-
-          scrollSnapTimeoutRef.current = window.setTimeout(() => {
-            snapToNearestPage()
-          }, 120)
         }}
       >
         {pages.map((pageMatches, pageIndex) => (
-          <div key={pageIndex} className="w-full shrink-0 snap-start px-1">
+          <div key={pageIndex} className="w-full shrink-0 px-1">
             <div className="grid grid-cols-10 gap-1.5 sm:grid-cols-20">
               {Array.from({ length: pageSize }, (_, index) => {
                 const match = pageMatches[index] ?? null

@@ -4,6 +4,16 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061225,
+    date: '2026-06-12',
+    title: 'Recent form drag position fix',
+    body: `Fixed recent form tiles jumping back to the latest page after drag release.
+
+• Removed browser scroll-snap fighting with manual drag
+• Scroll position now locks immediately when you let go
+• ↻ back-to-latest button unchanged`,
+  },
+  {
     id: 2026061224,
     date: '2026-06-12',
     title: 'Recent form drag stays on release',
