@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import WinMilestoneFireworks from './WinMilestoneFireworks'
+import {
+  markWinMilestoneCelebrated,
+  readLastWinMilestoneCelebrated,
+  shouldCelebrateWinMilestone,
+} from './winMilestoneUtils'
 
 type AnimatedCountUpProps = {
   value: number
@@ -98,9 +104,39 @@ export function RecordHeaderLabel() {
 }
 
 export function RecordOdometerStack({ wins, draws, losses }: OverallRecordDisplayProps) {
+  const [fireworksActive, setFireworksActive] = useState(false)
+  const prefersReducedMotion = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    [],
+  )
+  const celebratedRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (prefersReducedMotion) return
+
+    const lastCelebrated = readLastWinMilestoneCelebrated()
+    if (!shouldCelebrateWinMilestone(wins, lastCelebrated)) return
+    if (celebratedRef.current === wins) return
+
+    const startTimer = window.setTimeout(() => {
+      celebratedRef.current = wins
+      setFireworksActive(true)
+      markWinMilestoneCelebrated(wins)
+
+      window.setTimeout(() => setFireworksActive(false), 2400)
+    }, 1450)
+
+    return () => window.clearTimeout(startTimer)
+  }, [prefersReducedMotion, wins])
+
   return (
     <div className="record-odometer-stack flex shrink-0 flex-col items-end leading-none">
-      <AnimatedCountUp value={wins} color="#05CD99" delayMs={80} glow />
+      <div className="record-odometer-wins">
+        <WinMilestoneFireworks active={fireworksActive} />
+        <AnimatedCountUp value={wins} color="#05CD99" delayMs={80} glow />
+      </div>
       <AnimatedCountUp value={draws} color="#FFB547" delayMs={220} glow />
       <AnimatedCountUp value={losses} color="#EE5D50" delayMs={360} glow />
     </div>
