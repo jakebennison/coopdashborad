@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import {
   buildReleaseVersionMap,
   formatReleaseLabel,
-  getUpdateSummary,
+  parseUpdateBody,
 } from './updateNotificationUtils'
 import type { UpdateNote } from './types'
 
@@ -10,6 +10,26 @@ type DashboardUpdateAlertProps = {
   unseenUpdates: UpdateNote[]
   allUpdates: UpdateNote[]
   onDismiss: () => void
+}
+
+function UpdateAlertEntry({ update }: { update: UpdateNote }) {
+  const { intro, bullets } = parseUpdateBody(update.body)
+
+  return (
+    <article className="dashboard-update-alert__entry">
+      <p className="text-sm font-semibold text-ink">{update.title}</p>
+      {intro ? <p className="dashboard-update-alert__intro">{intro}</p> : null}
+      {bullets.length ? (
+        <ul className="dashboard-update-alert__list">
+          {bullets.map((bullet) => (
+            <li key={bullet}>{bullet}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="dashboard-update-alert__intro">{update.body.trim()}</p>
+      )}
+    </article>
+  )
 }
 
 export default function DashboardUpdateAlert({
@@ -38,25 +58,24 @@ export default function DashboardUpdateAlert({
   return (
     <div className="dashboard-update-alert" role="dialog" aria-modal="true" aria-labelledby="dashboard-update-title">
       <div className="dashboard-update-alert__panel">
-        <p className="record-display-font text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
-          What&apos;s new
-        </p>
-        <h2 id="dashboard-update-title" className="record-display-font mt-3 text-xl font-bold uppercase leading-tight sm:text-2xl">
-          Dashboard Update {releaseLabel}
-        </h2>
+        <header className="dashboard-update-alert__header">
+          <span className="dashboard-update-alert__eyebrow">Dashboard update</span>
+          <h2 id="dashboard-update-title" className="record-display-font dashboard-update-alert__title">
+            Update {releaseLabel}
+          </h2>
+        </header>
 
-        <div className="dashboard-update-alert__body mt-4">
+        <div className="dashboard-update-alert__body">
           {unseenUpdates.map((update) => (
-            <article key={update.id} className="dashboard-update-alert__entry">
-              <p className="text-sm font-semibold text-ink">{update.title}</p>
-              <p className="mt-1 text-sm leading-relaxed text-muted">{getUpdateSummary(update.body)}</p>
-            </article>
+            <UpdateAlertEntry key={update.id} update={update} />
           ))}
         </div>
 
-        <button type="button" onClick={onDismiss} className="btn-primary mt-5 w-full px-5 py-3 text-sm font-semibold">
-          Continue to dashboard
-        </button>
+        <footer className="dashboard-update-alert__footer">
+          <button type="button" onClick={onDismiss} className="btn-primary w-full px-5 py-3 text-sm font-semibold">
+            Continue to dashboard
+          </button>
+        </footer>
       </div>
     </div>
   )

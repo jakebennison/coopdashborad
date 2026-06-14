@@ -71,3 +71,15 @@ test('getPendingUpdateAlert waits for five threshold updates once forced alerts 
 
   restore()
 })
+
+test('parseUpdateBody splits intro text and bullet points', async () => {
+  const { parseUpdateBody } = await import('../src/updateNotificationUtils.ts')
+
+  const parsed = parseUpdateBody(`Intro paragraph here.
+
+• First change
+• Second change`)
+
+  assert.equal(parsed.intro, 'Intro paragraph here.')
+  assert.deepEqual(parsed.bullets, ['First change', 'Second change'])
+})

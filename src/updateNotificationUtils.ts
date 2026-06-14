@@ -129,16 +129,39 @@ export const formatReleaseLabel = (versions: string[]) => {
 }
 
 export const getUpdateSummary = (body: string, maxLength = 160) => {
-  const paragraphs = body
-    .split('\n\n')
-    .map((entry) => entry.trim())
+  const { intro, bullets } = parseUpdateBody(body)
+  const fallback = intro ?? bullets[0] ?? body.trim()
+  if (fallback.length <= maxLength) return fallback
+  return `${fallback.slice(0, maxLength).trim()}…`
+}
+
+export type ParsedUpdateBody = {
+  intro: string | null
+  bullets: string[]
+}
+
+export const parseUpdateBody = (body: string): ParsedUpdateBody => {
+  const lines = body
+    .split('\n')
+    .map((line) => line.trim())
     .filter(Boolean)
 
-  const intro =
-    paragraphs.find((entry) => !entry.startsWith('•')) ??
-    paragraphs[0]?.replace(/^•\s*/gm, '').split('\n')[0]?.trim() ??
-    body.trim()
+  const bullets: string[] = []
+  const introLines: string[] = []
 
-  if (intro.length <= maxLength) return intro
-  return `${intro.slice(0, maxLength).trim()}…`
+  for (const line of lines) {
+    if (line.startsWith('•')) {
+      bullets.push(line.replace(/^•\s*/, '').trim())
+      continue
+    }
+
+    if (!bullets.length) {
+      introLines.push(line)
+    }
+  }
+
+  return {
+    intro: introLines.join(' ').trim() || null,
+    bullets,
+  }
 }

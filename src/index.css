@@ -615,28 +615,95 @@ textarea {
 }
 
 .dashboard-update-alert__panel {
-  width: min(22rem, calc(100vw - 2rem));
-  min-height: min(22rem, calc(100vw - 2rem));
-  max-height: min(34rem, calc(100vh - 2rem));
+  width: min(24rem, calc(100vw - 2rem));
+  height: min(24rem, calc(100vh - 2rem));
+  max-height: min(32rem, calc(100vh - 2rem));
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: 1.25rem;
   background: var(--color-card);
-  padding: 1.5rem;
   box-shadow: 0 24px 80px rgb(0 0 0 / 0.22);
 }
 
+.dashboard-update-alert__header {
+  flex-shrink: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
+  padding: 1.25rem 1.5rem 1rem;
+}
+
+.dashboard-update-alert__eyebrow {
+  display: inline-flex;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  background: var(--color-accent-soft);
+  padding: 0.25rem 0.625rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.dashboard-update-alert__title {
+  margin-top: 0.875rem;
+  font-size: 1.375rem;
+  line-height: 1.15;
+  color: var(--color-ink);
+}
+
 .dashboard-update-alert__body {
-  display: grid;
-  gap: 0.875rem;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding-right: 0.125rem;
+  padding: 1rem 1.5rem;
 }
 
 .dashboard-update-alert__entry + .dashboard-update-alert__entry {
-  padding-top: 0.875rem;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 28%, transparent);
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
+}
+
+.dashboard-update-alert__intro {
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  color: var(--color-muted);
+}
+
+.dashboard-update-alert__list {
+  margin: 0.75rem 0 0;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard-update-alert__list li {
+  position: relative;
+  padding-left: 0.95rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-ink);
+}
+
+.dashboard-update-alert__list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.dashboard-update-alert__footer {
+  flex-shrink: 0;
+  margin-top: auto;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 24%, transparent);
+  padding: 1rem 1.5rem 1.25rem;
+  background: var(--color-card);
 }
 
 @media (prefers-reduced-motion: reduce) {
