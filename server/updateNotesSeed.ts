@@ -4,6 +4,16 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061229,
+    date: '2026-06-12',
+    title: 'Dashboard update alerts on entry',
+    body: `New changelog entries now surface automatically when you enter the dashboard.
+
+• Square update alert appears right after the welcome screen
+• Shows version label, summary, and any unseen updates from the changelog
+• Dashboard dims and blurs behind the alert until you continue`,
+  },
+  {
     id: 2026061228,
     date: '2026-06-12',
     title: 'Recent form free scroll and tile dates',

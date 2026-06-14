@@ -59,9 +59,12 @@ import {
   RecordOdometerStack,
 } from './OverallRecordDisplay'
 import UpdateTimeline from './UpdateTimeline'
+import DashboardUpdateAlert from './DashboardUpdateAlert'
 import WelcomeIntro from './WelcomeIntro'
 import { applyTheme, getThemeColors, readTheme, type Theme } from './theme'
 import { hasSeenWelcomeIntroThisSession } from './welcomeIntroStorage'
+import { fetchUpdateNotes } from './updatesApi'
+import { getUnseenUpdates, markUpdatesSeen } from './updateNotificationUtils'
 
 const SEASON_CLUBS = ['Real Madrid', 'Manchester United', 'PSG'] as const
 import {
@@ -69,7 +72,7 @@ import {
   findDuplicateMatches,
   formatLoggedMatchLabel,
 } from './duplicateUtils'
-import type { DraftMatch, Match, MatchStats, Result, Venue, VisionExtraction } from './types'
+import type { DraftMatch, Match, MatchStats, Result, UpdateNote, Venue, VisionExtraction } from './types'
 import {
   extractMatchFromXboxScreenshot,
   fetchXboxScreenshots,
@@ -149,7 +152,33 @@ function App() {
   const [selectedMatchId, setSelectedMatchId] = useState<number | null>(null)
   const [theme, setTheme] = useState<Theme>(() => readTheme())
   const [showWelcomeIntro, setShowWelcomeIntro] = useState(() => !hasSeenWelcomeIntroThisSession())
+  const [updateNotes, setUpdateNotes] = useState<UpdateNote[]>([])
+  const [unseenUpdates, setUnseenUpdates] = useState<UpdateNote[]>([])
+  const [showUpdateAlert, setShowUpdateAlert] = useState(false)
   const formMatches = useMemo(() => getFormTickerMatches(matches), [matches])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchUpdateNotes()
+      .then((loaded) => {
+        if (cancelled) return
+        setUpdateNotes(loaded)
+        setUnseenUpdates(getUnseenUpdates(loaded))
+      })
+      .catch(() => {
+        // Ignore update fetch failures — dashboard still loads normally.
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (showWelcomeIntro || !unseenUpdates.length) return
+    setShowUpdateAlert(true)
+  }, [showWelcomeIntro, unseenUpdates])
 
   useEffect(() => {
     let cancelled = false
@@ -316,6 +345,12 @@ function App() {
     }
   }
 
+  const dismissUpdateAlert = () => {
+    markUpdatesSeen(unseenUpdates)
+    setShowUpdateAlert(false)
+    setUnseenUpdates([])
+  }
+
   const pageTitle =
     view === 'dashboard'
       ? 'CO-OP 26 Dashboard'
@@ -338,10 +373,17 @@ function App() {
       {showWelcomeIntro ? (
         <WelcomeIntro formMatches={formMatches} onComplete={() => setShowWelcomeIntro(false)} />
       ) : null}
+      {showUpdateAlert ? (
+        <DashboardUpdateAlert
+          unseenUpdates={unseenUpdates}
+          allUpdates={updateNotes}
+          onDismiss={dismissUpdateAlert}
+        />
+      ) : null}
       <div
-        className={`mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row ${
+        className={`dashboard-shell mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row ${
           showWelcomeIntro ? 'invisible' : ''
-        }`}
+        } ${showUpdateAlert ? 'dashboard-shell--dimmed' : ''}`}
         aria-hidden={showWelcomeIntro}
       >
         <aside className="card m-4 flex shrink-0 flex-col gap-8 p-5 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:self-start">

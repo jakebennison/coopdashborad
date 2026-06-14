@@ -596,3 +596,51 @@ textarea {
     transform: none;
   }
 }
+
+.dashboard-shell--dimmed {
+  filter: blur(7px) brightness(0.68);
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.35s ease, opacity 0.35s ease;
+}
+
+.dashboard-update-alert {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgb(16 16 16 / 0.28);
+}
+
+.dashboard-update-alert__panel {
+  width: min(22rem, calc(100vw - 2rem));
+  min-height: min(22rem, calc(100vw - 2rem));
+  max-height: min(34rem, calc(100vh - 2rem));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: 1.25rem;
+  background: var(--color-card);
+  padding: 1.5rem;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 0.22);
+}
+
+.dashboard-update-alert__body {
+  display: grid;
+  gap: 0.875rem;
+  overflow-y: auto;
+  padding-right: 0.125rem;
+}
+
+.dashboard-update-alert__entry + .dashboard-update-alert__entry {
+  padding-top: 0.875rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 28%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-shell--dimmed {
+    transition: none;
+  }
+}
