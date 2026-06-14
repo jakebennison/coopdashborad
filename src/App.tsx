@@ -110,7 +110,7 @@ const resultToTone = (result: Result): keyof typeof resultToneStyles =>
 
 const winDrawGradient = (wins: number, draws: number) => {
   const total = wins + draws
-  if (total <= 0) return 'linear-gradient(145deg, #E9EDF7 0%, #DDE3F0 100%)'
+  if (total <= 0) return 'var(--color-card)'
   if (draws === 0) return resultToneStyles.win.background
   if (wins === 0) return resultToneStyles.draw.background
 
@@ -2080,7 +2080,10 @@ function StreakRunBox({
           {label}
           {club ? <span className="text-ink"> · {club}</span> : null}
         </p>
-        <p className={streakRunBadgeClass} style={{ background: winDrawGradient(stats.wins, stats.draws) }}>
+        <p
+          className={`${streakRunBadgeClass} ${stats.total === 0 ? 'text-ink' : 'text-white'}`}
+          style={{ background: winDrawGradient(stats.wins, stats.draws) }}
+        >
           {stats.total}
         </p>
       </div>
@@ -2142,7 +2145,12 @@ function RecordStreakCard({
           {description ? <p className="mt-1 text-xs leading-relaxed text-muted">{description}</p> : null}
         </div>
         <div className="shrink-0 text-right">
-          <p className={streakRunBadgeClass} style={{ background: badgeBackground }}>
+          <p
+            className={`${streakRunBadgeClass} ${
+              stats.total === 0 && !isWinRun ? 'text-ink' : 'text-white'
+            }`}
+            style={{ background: badgeBackground }}
+          >
             {stats.total}
           </p>
           <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-muted">{countLabel}</p>

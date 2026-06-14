@@ -62,7 +62,7 @@ const streakRunBadgeClass =
 
 const winDrawGradient = (wins: number, draws: number) => {
   const total = wins + draws
-  if (total <= 0) return 'linear-gradient(145deg, #E9EDF7 0%, #DDE3F0 100%)'
+  if (total <= 0) return 'var(--color-card)'
   if (draws === 0) return streakWinBackground
   if (wins === 0) return streakDrawBackground
 
@@ -361,7 +361,10 @@ function StreakHighlightBox({
           {label}
           {club ? <span className="text-ink"> · {club}</span> : null}
         </p>
-        <p className={streakRunBadgeClass} style={{ background: badgeBackground }}>
+        <p
+          className={`${streakRunBadgeClass} ${stats.total === 0 && !solidWin ? 'text-ink' : 'text-white'}`}
+          style={{ background: badgeBackground }}
+        >
           {stats.total}
         </p>
       </div>
