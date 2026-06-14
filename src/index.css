@@ -245,16 +245,24 @@ textarea {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-border) 12%, transparent);
 }
 
-.form-ticker-viewport {
-  touch-action: pan-y;
+.form-ticker-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-x pan-y;
 }
 
-.form-ticker-viewport.is-draggable {
+.form-ticker-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.form-ticker-scroll.is-scrollable {
   cursor: grab;
-  touch-action: none;
 }
 
-.form-ticker-viewport.is-dragging {
+.form-ticker-scroll.is-dragging {
   cursor: grabbing;
   user-select: none;
 }

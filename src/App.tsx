@@ -1749,6 +1749,20 @@ function DashboardMetricBox({ label, children }: { label: string; children: Reac
   )
 }
 
+function formatFormTileDate(match: Match) {
+  const date = new Date(match.date)
+  if (Number.isNaN(date.getTime()) || date.getFullYear() <= 1970) {
+    return 'Pre-tracker form'
+  }
+
+  return date.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
+}
+
 function FormTicker({
   matches,
   unbeatenStreak,
@@ -1765,12 +1779,13 @@ function FormTicker({
   onAddManualEntry: (draft: ManualFormDraft) => void
 }) {
   const pageSize = 20
-  const viewportRef = useRef<HTMLDivElement>(null)
-  const dragRef = useRef<{ pointerId: number; startX: number; startPage: number } | null>(null)
-  const dragOffsetRef = useRef(0)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(null)
+  const isDraggingRef = useRef(false)
   const [recordsOpen, setRecordsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
-  const [dragOffset, setDragOffset] = useState(0)
+  const [viewLabel, setViewLabel] = useState('Latest')
+  const [showLatestButton, setShowLatestButton] = useState(false)
   const pages = useMemo(() => {
     const result: Match[][] = []
 
@@ -1780,78 +1795,83 @@ function FormTicker({
 
     return result.length ? result : [[]]
   }, [matches])
-  const [activePage, setActivePage] = useState(0)
-  const pageCount = pages.length
-  const slideShare = pageCount > 0 ? 100 / pageCount : 100
+  const canScroll = pages.length > 1
 
-  const goToPage = (pageIndex: number) => {
-    const nextPage = Math.max(0, Math.min(pageCount - 1, pageIndex))
-    setActivePage(nextPage)
-    setDragOffset(0)
-    dragOffsetRef.current = 0
+  const buildViewLabel = (scrollLeft: number, viewportWidth: number) => {
+    if (!matches.length) return 'No results yet'
+    if (scrollLeft < 12) {
+      return canScroll ? `Latest ${Math.min(pageSize, matches.length)}` : `Latest ${matches.length}`
+    }
+
+    const pageIndex = Math.floor(scrollLeft / Math.max(viewportWidth, 1))
+    const start = pageIndex * pageSize + 1
+    const end = Math.min((pageIndex + 1) * pageSize, matches.length)
+
+    return `Games ${start}–${end}`
+  }
+
+  const updateScrollMeta = () => {
+    const scrollEl = scrollRef.current
+    if (!scrollEl) return
+
+    const width = scrollEl.clientWidth
+    if (!width) return
+
+    setShowLatestButton(scrollEl.scrollLeft > 12)
+    setViewLabel(buildViewLabel(scrollEl.scrollLeft, width))
+  }
+
+  const scrollToLatest = () => {
+    scrollRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
   }
 
   useEffect(() => {
-    setActivePage(0)
-    setDragOffset(0)
-    dragOffsetRef.current = 0
+    scrollRef.current?.scrollTo({ left: 0, behavior: 'auto' })
+    updateScrollMeta()
   }, [matches.length])
+
+  useEffect(() => {
+    updateScrollMeta()
+  }, [matches, pages.length])
 
   const endDrag = (_event: React.PointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current
-    const viewport = viewportRef.current
+    const scrollEl = scrollRef.current
     if (!drag) return
 
-    if (viewport?.hasPointerCapture(drag.pointerId)) {
-      viewport.releasePointerCapture(drag.pointerId)
+    if (scrollEl?.hasPointerCapture(drag.pointerId)) {
+      scrollEl.releasePointerCapture(drag.pointerId)
     }
 
-    const width = viewport?.clientWidth ?? 0
-    const pageDelta = width > 0 ? Math.round(-dragOffsetRef.current / width) : 0
-    goToPage(drag.startPage + pageDelta)
-
     dragRef.current = null
+    isDraggingRef.current = false
     setIsDragging(false)
+    updateScrollMeta()
   }
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || pageCount <= 1) return
+    if (event.button !== 0) return
 
-    const viewport = viewportRef.current
-    if (!viewport) return
-
-    event.preventDefault()
+    const scrollEl = scrollRef.current
+    if (!scrollEl || scrollEl.scrollWidth <= scrollEl.clientWidth) return
 
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
-      startPage: activePage,
+      startScrollLeft: scrollEl.scrollLeft,
     }
+    isDraggingRef.current = true
     setIsDragging(true)
-    viewport.setPointerCapture(event.pointerId)
+    scrollEl.setPointerCapture(event.pointerId)
   }
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const scrollEl = scrollRef.current
     const drag = dragRef.current
-    if (!drag || drag.pointerId !== event.pointerId) return
+    if (!scrollEl || !drag || drag.pointerId !== event.pointerId) return
 
     event.preventDefault()
-    const offset = event.clientX - drag.startX
-    dragOffsetRef.current = offset
-    setDragOffset(offset)
-  }
-
-  const pageLabel = (pageIndex: number) => {
-    if (!matches.length) return 'No results yet'
-
-    const start = pageIndex * pageSize + 1
-    const end = Math.min((pageIndex + 1) * pageSize, matches.length)
-
-    if (pageIndex === 0) {
-      return pages.length > 1 ? `Latest ${end}` : `Latest ${matches.length}`
-    }
-
-    return `Games ${start}–${end}`
+    scrollEl.scrollLeft = drag.startScrollLeft - (event.clientX - drag.startX)
   }
 
   return (
@@ -1859,10 +1879,10 @@ function FormTicker({
       <div className="mb-3 flex items-start justify-between gap-2 px-1">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <p className="record-display-font text-sm font-bold uppercase sm:text-base">Recent form</p>
-          {pageCount > 1 && activePage > 0 ? (
+          {canScroll && showLatestButton ? (
             <button
               type="button"
-              onClick={() => goToPage(0)}
+              onClick={scrollToLatest}
               aria-label="Back to latest form"
               title="Back to latest form"
               className="record-display-font inline-flex items-center gap-1 rounded-lg border border-ink bg-soft px-2.5 py-1 text-[11px] font-bold uppercase text-ink transition hover:bg-card"
@@ -1873,23 +1893,17 @@ function FormTicker({
           ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <p className="hidden text-xs font-medium text-muted sm:block">
-            {pageLabel(activePage)}
-            {pageCount > 1 ? ` · ${activePage + 1}/${pageCount}` : ''}
-          </p>
+          <p className="hidden text-xs font-medium text-muted sm:block">{viewLabel}</p>
           <FormManualEntry onSubmit={onAddManualEntry} />
         </div>
       </div>
 
       <div className="mb-3 flex items-center justify-between gap-2 px-1 sm:hidden">
-        <p className="text-xs font-medium text-muted">
-          {pageLabel(activePage)}
-          {pageCount > 1 ? ` · ${activePage + 1}/${pageCount}` : ''}
-        </p>
-        {pageCount > 1 && activePage > 0 ? (
+        <p className="text-xs font-medium text-muted">{viewLabel}</p>
+        {canScroll && showLatestButton ? (
           <button
             type="button"
-            onClick={() => goToPage(0)}
+            onClick={scrollToLatest}
             aria-label="Back to latest form"
             title="Back to latest form"
             className="record-display-font inline-flex shrink-0 items-center gap-1 rounded-lg border border-ink bg-soft px-2.5 py-1 text-[11px] font-bold uppercase text-ink transition hover:bg-card"
@@ -1901,31 +1915,17 @@ function FormTicker({
       </div>
 
       <div
-        ref={viewportRef}
-        className={`form-ticker-viewport overflow-hidden ${
-          pageCount > 1 ? 'is-draggable' : ''
-        } ${isDragging ? 'is-dragging' : ''}`}
+        ref={scrollRef}
+        className={`form-ticker-scroll ${canScroll ? 'is-scrollable' : ''} ${isDragging ? 'is-dragging' : ''}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onScroll={updateScrollMeta}
       >
-        <div
-          className={`flex ${isDragging ? '' : 'transition-transform duration-300 ease-out'}`}
-          style={{
-            width: `${pageCount * 100}%`,
-            transform:
-              pageCount <= 1
-                ? undefined
-                : `translateX(calc(-${activePage * slideShare}% + ${dragOffset}px))`,
-          }}
-        >
+        <div className="flex">
           {pages.map((pageMatches, pageIndex) => (
-            <div
-              key={pageIndex}
-              className="shrink-0 px-1"
-              style={{ width: `${slideShare}%` }}
-            >
+            <div key={pageIndex} className="w-full shrink-0 px-1">
               <div className="grid grid-cols-10 gap-1.5 sm:grid-cols-20">
                 {Array.from({ length: pageSize }, (_, index) => {
                   const match = pageMatches[index] ?? null
@@ -2357,9 +2357,10 @@ function FormMiniTile({ match }: { match: Match }) {
   const manualEntry = isManualFormMatch(match)
   const resultLabel = match.result === 'W' ? 'Win' : match.result === 'D' ? 'Draw' : 'Loss'
   const venueLabel = match.venue === 'home' ? 'Home' : 'Away'
+  const dateLabel = formatFormTileDate(match)
   const tooltipText = manualEntry
-    ? `${resultLabel} · ${venueLabel} · PSG vs ${match.opponent}`
-    : `${resultLabel} · ${venueLabel} · ${match.opponent} ${match.myScore}-${match.opponentScore}`
+    ? `${dateLabel} · ${resultLabel} · ${venueLabel} · PSG vs ${match.opponent}`
+    : `${dateLabel} · ${resultLabel} · ${venueLabel} · ${match.opponent} ${match.myScore}-${match.opponentScore}`
   const tone = resultToTone(match.result)
 
   const updateTooltipPos = () => {
@@ -2410,6 +2411,7 @@ function FormMiniTile({ match }: { match: Match }) {
           <p className="text-xs font-semibold" style={{ color: resultColors[match.result] }}>
             {resultLabel}
           </p>
+          <p className="mt-0.5 text-[11px] font-medium text-muted">{dateLabel}</p>
           <p className="mt-0.5 text-xs font-medium text-ink">{venueLabel}</p>
           <p className="mt-1 text-[11px] text-muted">
             {manualEntry ? `PSG vs ${match.opponent}` : `${match.opponent} · ${match.myScore}-${match.opponentScore}`}
