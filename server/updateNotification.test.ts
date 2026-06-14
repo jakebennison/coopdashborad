@@ -58,3 +58,12 @@ test('getUnseenUpdates returns only notes newer than the last seen id', async ()
 
   globalThis.window = originalWindow
 })
+
+test('shouldShowUpdateAlert waits for five unseen updates unless forced', async () => {
+  const { shouldShowUpdateAlert } = await import('../src/updateNotificationUtils.ts')
+
+  const generic = [note(12), note(13), note(14)]
+  assert.equal(shouldShowUpdateAlert(generic), false)
+  assert.equal(shouldShowUpdateAlert([...generic, note(15), note(16)]), true)
+  assert.equal(shouldShowUpdateAlert([note(2026061228)]), true)
+})

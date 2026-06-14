@@ -2,6 +2,12 @@ import type { UpdateNote } from './types'
 
 export const LAST_SEEN_UPDATE_ID_KEY = 'coop26-last-seen-update-id'
 
+/** Minimum unseen changelog entries before the entry alert appears. */
+export const UPDATE_ALERT_MIN_COUNT = 5
+
+/** Changelog ids that should notify immediately, below the minimum count. */
+export const FORCE_NOTIFICATION_UPDATE_IDS = new Set<number>([2026061228])
+
 export const readLastSeenUpdateId = (): number => {
   try {
     const raw = window.localStorage.getItem(LAST_SEEN_UPDATE_ID_KEY)
@@ -41,6 +47,12 @@ export const getUnseenUpdates = (updates: UpdateNote[]): UpdateNote[] => {
   return updates
     .filter((update) => update.id > lastSeen)
     .sort((a, b) => b.id - a.id || b.date.localeCompare(a.date))
+}
+
+export const shouldShowUpdateAlert = (unseenUpdates: UpdateNote[]): boolean => {
+  if (!unseenUpdates.length) return false
+  if (unseenUpdates.some((update) => FORCE_NOTIFICATION_UPDATE_IDS.has(update.id))) return true
+  return unseenUpdates.length >= UPDATE_ALERT_MIN_COUNT
 }
 
 export const buildReleaseVersionMap = (updates: UpdateNote[]): Map<number, string> => {

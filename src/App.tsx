@@ -64,7 +64,7 @@ import WelcomeIntro from './WelcomeIntro'
 import { applyTheme, getThemeColors, readTheme, type Theme } from './theme'
 import { hasSeenWelcomeIntroThisSession } from './welcomeIntroStorage'
 import { fetchUpdateNotes } from './updatesApi'
-import { getUnseenUpdates, markUpdatesSeen } from './updateNotificationUtils'
+import { getUnseenUpdates, markUpdatesSeen, shouldShowUpdateAlert } from './updateNotificationUtils'
 
 const SEASON_CLUBS = ['Real Madrid', 'Manchester United', 'PSG'] as const
 import {
@@ -176,7 +176,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (showWelcomeIntro || !unseenUpdates.length) return
+    if (showWelcomeIntro || !shouldShowUpdateAlert(unseenUpdates)) return
     setShowUpdateAlert(true)
   }, [showWelcomeIntro, unseenUpdates])
 

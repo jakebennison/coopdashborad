@@ -4,6 +4,15 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061230,
+    date: '2026-06-12',
+    title: 'Update alerts only after five changes',
+    body: `Dashboard update alerts now wait until enough changes have built up.
+
+• Entry alert only appears after five or more unseen changelog updates
+• Recent form free-scroll update still notifies immediately as a one-off`,
+  },
+  {
     id: 2026061229,
     date: '2026-06-12',
     title: 'Dashboard update alerts on entry',
