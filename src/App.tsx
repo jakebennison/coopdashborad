@@ -64,7 +64,7 @@ import WelcomeIntro from './WelcomeIntro'
 import { applyTheme, getThemeColors, readTheme, type Theme } from './theme'
 import { hasSeenWelcomeIntroThisSession } from './welcomeIntroStorage'
 import { fetchUpdateNotes } from './updatesApi'
-import { getUnseenUpdates, markUpdatesSeen, shouldShowUpdateAlert } from './updateNotificationUtils'
+import { getPendingUpdateAlert, markForcedUpdatesDismissed, markUpdatesSeen } from './updateNotificationUtils'
 
 const SEASON_CLUBS = ['Real Madrid', 'Manchester United', 'PSG'] as const
 import {
@@ -153,7 +153,7 @@ function App() {
   const [theme, setTheme] = useState<Theme>(() => readTheme())
   const [showWelcomeIntro, setShowWelcomeIntro] = useState(() => !hasSeenWelcomeIntroThisSession())
   const [updateNotes, setUpdateNotes] = useState<UpdateNote[]>([])
-  const [unseenUpdates, setUnseenUpdates] = useState<UpdateNote[]>([])
+  const [alertUpdates, setAlertUpdates] = useState<UpdateNote[]>([])
   const [showUpdateAlert, setShowUpdateAlert] = useState(false)
   const formMatches = useMemo(() => getFormTickerMatches(matches), [matches])
 
@@ -164,7 +164,7 @@ function App() {
       .then((loaded) => {
         if (cancelled) return
         setUpdateNotes(loaded)
-        setUnseenUpdates(getUnseenUpdates(loaded))
+        setAlertUpdates(getPendingUpdateAlert(loaded))
       })
       .catch(() => {
         // Ignore update fetch failures — dashboard still loads normally.
@@ -176,9 +176,9 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (showWelcomeIntro || !shouldShowUpdateAlert(unseenUpdates)) return
+    if (showWelcomeIntro || !alertUpdates.length) return
     setShowUpdateAlert(true)
-  }, [showWelcomeIntro, unseenUpdates])
+  }, [showWelcomeIntro, alertUpdates])
 
   useEffect(() => {
     let cancelled = false
@@ -346,9 +346,10 @@ function App() {
   }
 
   const dismissUpdateAlert = () => {
-    markUpdatesSeen(unseenUpdates)
+    markUpdatesSeen(alertUpdates)
+    markForcedUpdatesDismissed(alertUpdates)
     setShowUpdateAlert(false)
-    setUnseenUpdates([])
+    setAlertUpdates([])
   }
 
   const pageTitle =
@@ -375,7 +376,7 @@ function App() {
       ) : null}
       {showUpdateAlert ? (
         <DashboardUpdateAlert
-          unseenUpdates={unseenUpdates}
+          unseenUpdates={alertUpdates}
           allUpdates={updateNotes}
           onDismiss={dismissUpdateAlert}
         />

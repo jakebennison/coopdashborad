@@ -4,6 +4,15 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061231,
+    date: '2026-06-12',
+    title: 'Fix forced dashboard update alerts',
+    body: `One-off update alerts now show even if you have opened the dashboard before.
+
+• Recent form update alert no longer gets skipped by first-visit changelog bootstrap
+• Forced alerts stay pending until you dismiss them with Continue`,
+  },
+  {
     id: 2026061230,
     date: '2026-06-12',
     title: 'Update alerts only after five changes',

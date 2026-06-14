@@ -10,8 +10,7 @@ const note = (id: number): UpdateNote => ({
   createdAt: '2026-06-12T12:00:00.000Z',
 })
 
-test('getUnseenUpdates skips historical backlog on first visit', async () => {
-  const storage = new Map<string, string>()
+const mockWindow = (storage = new Map<string, string>()) => {
   const originalWindow = globalThis.window
 
   globalThis.window = {
@@ -22,6 +21,14 @@ test('getUnseenUpdates skips historical backlog on first visit', async () => {
       },
     },
   } as Window & typeof globalThis
+
+  return () => {
+    globalThis.window = originalWindow
+  }
+}
+
+test('getUnseenUpdates skips historical backlog on first visit', async () => {
+  const restore = mockWindow()
 
   const { bootstrapLastSeenUpdateId, getUnseenUpdates, readLastSeenUpdateId } = await import(
     '../src/updateNotificationUtils.ts'
@@ -32,38 +39,35 @@ test('getUnseenUpdates skips historical backlog on first visit', async () => {
   assert.equal(readLastSeenUpdateId(), 11)
   assert.deepEqual(getUnseenUpdates(updates), [])
 
-  globalThis.window = originalWindow
+  restore()
 })
 
-test('getUnseenUpdates returns only notes newer than the last seen id', async () => {
-  const storage = new Map<string, string>([['coop26-last-seen-update-id', '11']])
-  const originalWindow = globalThis.window
+test('getPendingUpdateAlert still shows forced updates after first-visit bootstrap', async () => {
+  const restore = mockWindow()
 
-  globalThis.window = {
-    localStorage: {
-      getItem: (key: string) => storage.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        storage.set(key, value)
-      },
-    },
-  } as Window & typeof globalThis
+  const { getPendingUpdateAlert, readLastSeenUpdateId } = await import('../src/updateNotificationUtils.ts')
 
-  const { getUnseenUpdates } = await import('../src/updateNotificationUtils.ts')
+  const updates = [note(10), note(2026061228), note(30)]
+  assert.deepEqual(getPendingUpdateAlert(updates).map((entry) => entry.id), [2026061228])
+  assert.equal(readLastSeenUpdateId(), 0)
 
-  const unseen = getUnseenUpdates([note(10), note(11), note(12), note(13)])
-  assert.deepEqual(
-    unseen.map((entry) => entry.id),
-    [13, 12],
-  )
-
-  globalThis.window = originalWindow
+  restore()
 })
 
-test('shouldShowUpdateAlert waits for five unseen updates unless forced', async () => {
-  const { shouldShowUpdateAlert } = await import('../src/updateNotificationUtils.ts')
+test('getPendingUpdateAlert waits for five threshold updates once forced alerts are dismissed', async () => {
+  const storage = new Map<string, string>([
+    ['coop26-last-seen-update-id', '11'],
+    ['coop26-dismissed-forced-update-ids', '[2026061228]'],
+  ])
+  const restore = mockWindow(storage)
 
-  const generic = [note(12), note(13), note(14)]
-  assert.equal(shouldShowUpdateAlert(generic), false)
-  assert.equal(shouldShowUpdateAlert([...generic, note(15), note(16)]), true)
-  assert.equal(shouldShowUpdateAlert([note(2026061228)]), true)
+  const { getPendingUpdateAlert } = await import('../src/updateNotificationUtils.ts')
+
+  const threeUnseen = [note(10), note(11), note(12), note(13), note(14)]
+  assert.deepEqual(getPendingUpdateAlert(threeUnseen).map((entry) => entry.id), [])
+
+  const fiveUnseen = [...threeUnseen, note(15), note(16)]
+  assert.deepEqual(getPendingUpdateAlert(fiveUnseen).map((entry) => entry.id), [16, 15, 14, 13, 12])
+
+  restore()
 })
