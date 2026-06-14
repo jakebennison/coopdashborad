@@ -4,63 +4,15 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
-    id: 2026061227,
+    id: 2026061228,
     date: '2026-06-12',
-    title: 'Free-scroll recent form with tile dates',
-    body: `Recent form now scrolls smoothly without snapping back to a fixed page.
+    title: 'Recent form free scroll and tile dates',
+    body: `Browsing older form on the dashboard is smoother and more informative.
 
-• Click-drag or two-finger scroll; tiles stay exactly where you leave them
-• ↻ Latest jumps back to the newest games when you have scrolled away
-• Hover a form tile to see the match date alongside result and opponent info`,
-  },
-  {
-    id: 2026061226,
-    date: '2026-06-12',
-    title: 'Recent form drag rewritten to stay put',
-    body: `Rebuilt recent form paging so dragged tiles stay where you leave them.
-
-• Uses slide transforms instead of browser scroll, which was snapping back
-• ↻ Latest button appears beside the title when viewing older form pages
-• Drag left for older results; tap Latest to jump back to the newest 20 games`,
-  },
-  {
-    id: 2026061225,
-    date: '2026-06-12',
-    title: 'Recent form drag position fix',
-    body: `Fixed recent form tiles jumping back to the latest page after drag release.
-
-• Removed browser scroll-snap fighting with manual drag
-• Scroll position now locks immediately when you let go
-• ↻ back-to-latest button unchanged`,
-  },
-  {
-    id: 2026061224,
-    date: '2026-06-12',
-    title: 'Recent form drag stays on release',
-    body: `Dragging recent form tiles now keeps your place when you let go.
-
-• Scroll position locks to the nearest page after drag instead of jumping back
-• ↻ button appears when viewing older form to jump back to the latest 20 games`,
-  },
-  {
-    id: 2026061223,
-    date: '2026-06-12',
-    title: 'Drag recent form tiles directly',
-    body: `Recent form now scrolls by dragging the result tiles themselves.
-
-• Removed the separate drag bar and Older/Newer buttons
-• Click and drag the tile row to browse older form pages
-• Snap scrolling still settles on each page after you release`,
-  },
-  {
-    id: 2026061222,
-    date: '2026-06-12',
-    title: 'Recent form scroll scrubber',
-    body: `Easier browsing through older form results on the dashboard.
-
-• Drag scrubber sits below the form tiles without overlapping them
-• Newer and Older navigation buttons swapped to match scroll direction
-• Native carousel scrollbar hidden in favour of the dedicated drag control`,
+• Scroll with click-drag or two-finger trackpad swipe — tiles stay exactly where you leave them
+• No page snap-back; browse seamlessly through older results
+• ↻ Latest button appears when you have scrolled away and jumps back to the newest games
+• Hover any W/D/L tile to see the match date, result, venue, opponent, and score`,
   },
   {
     id: 2026061221,
