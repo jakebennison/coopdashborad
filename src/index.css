@@ -245,23 +245,16 @@ textarea {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-border) 12%, transparent);
 }
 
-.form-ticker-carousel {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+.form-ticker-viewport {
   touch-action: pan-y;
-  overscroll-behavior-x: contain;
 }
 
-.form-ticker-carousel::-webkit-scrollbar {
-  display: none;
-}
-
-.form-ticker-carousel.is-draggable {
+.form-ticker-viewport.is-draggable {
   cursor: grab;
-  touch-action: pan-x;
+  touch-action: none;
 }
 
-.form-ticker-carousel.is-dragging {
+.form-ticker-viewport.is-dragging {
   cursor: grabbing;
   user-select: none;
 }

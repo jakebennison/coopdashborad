@@ -4,6 +4,16 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026061226,
+    date: '2026-06-12',
+    title: 'Recent form drag rewritten to stay put',
+    body: `Rebuilt recent form paging so dragged tiles stay where you leave them.
+
+• Uses slide transforms instead of browser scroll, which was snapping back
+• ↻ Latest button appears beside the title when viewing older form pages
+• Drag left for older results; tap Latest to jump back to the newest 20 games`,
+  },
+  {
     id: 2026061225,
     date: '2026-06-12',
     title: 'Recent form drag position fix',

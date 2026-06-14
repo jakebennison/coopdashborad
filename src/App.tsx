@@ -1765,11 +1765,12 @@ function FormTicker({
   onAddManualEntry: (draft: ManualFormDraft) => void
 }) {
   const pageSize = 20
-  const carouselRef = useRef<HTMLDivElement>(null)
-  const dragRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number } | null>(null)
-  const isDraggingRef = useRef(false)
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ pointerId: number; startX: number; startPage: number } | null>(null)
+  const dragOffsetRef = useRef(0)
   const [recordsOpen, setRecordsOpen] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [dragOffset, setDragOffset] = useState(0)
   const pages = useMemo(() => {
     const result: Match[][] = []
 
@@ -1780,105 +1781,64 @@ function FormTicker({
     return result.length ? result : [[]]
   }, [matches])
   const [activePage, setActivePage] = useState(0)
+  const pageCount = pages.length
+  const slideShare = pageCount > 0 ? 100 / pageCount : 100
 
-  const getPageIndexFromScroll = (scrollLeft: number, width: number) =>
-    Math.max(0, Math.min(pages.length - 1, Math.round(scrollLeft / width)))
-
-  const scrollToPage = (pageIndex: number, behavior: ScrollBehavior = 'auto') => {
-    const carousel = carouselRef.current
-    if (!carousel) return
-
-    const width = carousel.clientWidth
-    if (!width) return
-
-    const nextPage = Math.max(0, Math.min(pages.length - 1, pageIndex))
-    carousel.scrollTo({ left: nextPage * width, behavior })
+  const goToPage = (pageIndex: number) => {
+    const nextPage = Math.max(0, Math.min(pageCount - 1, pageIndex))
     setActivePage(nextPage)
-  }
-
-  const snapToNearestPage = (behavior: ScrollBehavior = 'auto') => {
-    if (isDraggingRef.current) return
-
-    const carousel = carouselRef.current
-    if (!carousel || pages.length <= 1) return
-
-    const width = carousel.clientWidth
-    if (!width) return
-
-    scrollToPage(getPageIndexFromScroll(carousel.scrollLeft, width), behavior)
+    setDragOffset(0)
+    dragOffsetRef.current = 0
   }
 
   useEffect(() => {
     setActivePage(0)
-    carouselRef.current?.scrollTo({ left: 0, behavior: 'auto' })
+    setDragOffset(0)
+    dragOffsetRef.current = 0
   }, [matches.length])
 
-  useEffect(() => {
-    isDraggingRef.current = isDragging
-  }, [isDragging])
-
-  useEffect(() => {
-    const carousel = carouselRef.current
-    if (!carousel || pages.length <= 1) return
-
-    const handleScrollEnd = () => {
-      if (isDraggingRef.current) return
-      snapToNearestPage()
-    }
-
-    carousel.addEventListener('scrollend', handleScrollEnd)
-    return () => carousel.removeEventListener('scrollend', handleScrollEnd)
-  }, [pages.length])
-
   const endDrag = (_event: React.PointerEvent<HTMLDivElement>) => {
-    const carousel = carouselRef.current
     const drag = dragRef.current
-    if (!carousel || !drag) return
+    const viewport = viewportRef.current
+    if (!drag) return
 
-    const width = carousel.clientWidth
-    const scrollLeft = carousel.scrollLeft
-    const targetPage =
-      width > 0 ? getPageIndexFromScroll(scrollLeft, width) : activePage
-
-    if (carousel.hasPointerCapture(drag.pointerId)) {
-      carousel.releasePointerCapture(drag.pointerId)
+    if (viewport?.hasPointerCapture(drag.pointerId)) {
+      viewport.releasePointerCapture(drag.pointerId)
     }
+
+    const width = viewport?.clientWidth ?? 0
+    const pageDelta = width > 0 ? Math.round(-dragOffsetRef.current / width) : 0
+    goToPage(drag.startPage + pageDelta)
 
     dragRef.current = null
-    isDraggingRef.current = false
-
-    if (width > 0) {
-      carousel.scrollLeft = targetPage * width
-    }
-    setActivePage(targetPage)
     setIsDragging(false)
   }
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || pages.length <= 1) return
+    if (event.button !== 0 || pageCount <= 1) return
 
-    const carousel = carouselRef.current
-    if (!carousel) return
+    const viewport = viewportRef.current
+    if (!viewport) return
 
     event.preventDefault()
 
     dragRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
-      startScrollLeft: carousel.scrollLeft,
+      startPage: activePage,
     }
-    isDraggingRef.current = true
     setIsDragging(true)
-    carousel.setPointerCapture(event.pointerId)
+    viewport.setPointerCapture(event.pointerId)
   }
 
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const carousel = carouselRef.current
     const drag = dragRef.current
-    if (!carousel || !drag || drag.pointerId !== event.pointerId) return
+    if (!drag || drag.pointerId !== event.pointerId) return
 
     event.preventDefault()
-    carousel.scrollLeft = drag.startScrollLeft - (event.clientX - drag.startX)
+    const offset = event.clientX - drag.startX
+    dragOffsetRef.current = offset
+    setDragOffset(offset)
   }
 
   const pageLabel = (pageIndex: number) => {
@@ -1897,23 +1857,26 @@ function FormTicker({
   return (
     <div className="relative mt-6 overflow-visible rounded-2xl border border-ink bg-card p-4">
       <div className="mb-3 flex items-start justify-between gap-2 px-1">
-        <p className="record-display-font text-sm font-bold uppercase sm:text-base">Recent form</p>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <p className="record-display-font text-sm font-bold uppercase sm:text-base">Recent form</p>
+          {pageCount > 1 && activePage > 0 ? (
+            <button
+              type="button"
+              onClick={() => goToPage(0)}
+              aria-label="Back to latest form"
+              title="Back to latest form"
+              className="record-display-font inline-flex items-center gap-1 rounded-lg border border-ink bg-soft px-2.5 py-1 text-[11px] font-bold uppercase text-ink transition hover:bg-card"
+            >
+              <span aria-hidden>↻</span>
+              Latest
+            </button>
+          ) : null}
+        </div>
         <div className="flex shrink-0 items-center gap-2">
           <p className="hidden text-xs font-medium text-muted sm:block">
             {pageLabel(activePage)}
-            {pages.length > 1 ? ` · ${activePage + 1}/${pages.length}` : ''}
+            {pageCount > 1 ? ` · ${activePage + 1}/${pageCount}` : ''}
           </p>
-          {activePage > 0 ? (
-            <button
-              type="button"
-              onClick={() => scrollToPage(0, 'smooth')}
-              aria-label="Back to latest form"
-              title="Back to latest form"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-ink bg-card text-base text-muted transition hover:bg-soft hover:text-ink"
-            >
-              ↻
-            </button>
-          ) : null}
           <FormManualEntry onSubmit={onAddManualEntry} />
         </div>
       </div>
@@ -1921,58 +1884,66 @@ function FormTicker({
       <div className="mb-3 flex items-center justify-between gap-2 px-1 sm:hidden">
         <p className="text-xs font-medium text-muted">
           {pageLabel(activePage)}
-          {pages.length > 1 ? ` · ${activePage + 1}/${pages.length}` : ''}
+          {pageCount > 1 ? ` · ${activePage + 1}/${pageCount}` : ''}
         </p>
-        {activePage > 0 ? (
+        {pageCount > 1 && activePage > 0 ? (
           <button
             type="button"
-            onClick={() => scrollToPage(0, 'smooth')}
+            onClick={() => goToPage(0)}
             aria-label="Back to latest form"
             title="Back to latest form"
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-ink bg-card text-base text-muted transition hover:bg-soft hover:text-ink"
+            className="record-display-font inline-flex shrink-0 items-center gap-1 rounded-lg border border-ink bg-soft px-2.5 py-1 text-[11px] font-bold uppercase text-ink transition hover:bg-card"
           >
-            ↻
+            <span aria-hidden>↻</span>
+            Latest
           </button>
         ) : null}
       </div>
 
       <div
-        ref={carouselRef}
-        className={`form-ticker-carousel relative flex overflow-x-auto ${
-          pages.length > 1 ? 'is-draggable' : ''
+        ref={viewportRef}
+        className={`form-ticker-viewport overflow-hidden ${
+          pageCount > 1 ? 'is-draggable' : ''
         } ${isDragging ? 'is-dragging' : ''}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onScroll={(event) => {
-          if (isDraggingRef.current) return
-
-          const width = event.currentTarget.clientWidth
-          if (!width) return
-          const index = getPageIndexFromScroll(event.currentTarget.scrollLeft, width)
-          if (index !== activePage) setActivePage(index)
-        }}
       >
-        {pages.map((pageMatches, pageIndex) => (
-          <div key={pageIndex} className="w-full shrink-0 px-1">
-            <div className="grid grid-cols-10 gap-1.5 sm:grid-cols-20">
-              {Array.from({ length: pageSize }, (_, index) => {
-                const match = pageMatches[index] ?? null
+        <div
+          className={`flex ${isDragging ? '' : 'transition-transform duration-300 ease-out'}`}
+          style={{
+            width: `${pageCount * 100}%`,
+            transform:
+              pageCount <= 1
+                ? undefined
+                : `translateX(calc(-${activePage * slideShare}% + ${dragOffset}px))`,
+          }}
+        >
+          {pages.map((pageMatches, pageIndex) => (
+            <div
+              key={pageIndex}
+              className="shrink-0 px-1"
+              style={{ width: `${slideShare}%` }}
+            >
+              <div className="grid grid-cols-10 gap-1.5 sm:grid-cols-20">
+                {Array.from({ length: pageSize }, (_, index) => {
+                  const match = pageMatches[index] ?? null
 
-                return match ? (
-                  <FormMiniTile key={match.id} match={match} />
-                ) : (
-                  <div
-                    key={`empty-${pageIndex}-${index}`}
-                    className="aspect-square min-h-8 rounded-sm border border-dashed border-ink/15"
-                    aria-hidden
-                  />
-                )
-              })}
+                  return match ? (
+                    <FormMiniTile key={match.id} match={match} />
+                  ) : (
+                    <div
+                      key={`empty-${pageIndex}-${index}`}
+                      className="aspect-square min-h-8 rounded-sm border border-dashed border-ink/15"
+                      aria-hidden
+                    />
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <div className="relative mt-4 overflow-hidden rounded-xl border border-ink">
