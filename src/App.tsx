@@ -470,6 +470,7 @@ function App() {
             <Dashboard
               matches={matches}
               theme={theme}
+              recordAnimationsActive={!showWelcomeIntro}
               onAdd={() => setView('add')}
               onOpenMatch={openMatch}
               onAddManualFormEntry={saveManualFormEntry}
@@ -539,12 +540,14 @@ function NavButton({
 function Dashboard({
   matches,
   theme,
+  recordAnimationsActive,
   onAdd,
   onOpenMatch,
   onAddManualFormEntry,
 }: {
   matches: Match[]
   theme: Theme
+  recordAnimationsActive: boolean
   onAdd: () => void
   onOpenMatch: (match: Match) => void
   onAddManualFormEntry: (draft: ManualFormDraft) => void
@@ -614,7 +617,12 @@ function Dashboard({
         <div className="dashboard-record-header grid grid-cols-1 gap-8 xl:grid-cols-[auto_auto_minmax(9.5rem,10rem)_15rem] xl:items-start xl:gap-x-12 xl:gap-y-0">
           <RecordHeaderLabel />
           <div ref={odometerRef} className="shrink-0">
-            <RecordOdometerStack wins={record.W} draws={record.D} losses={record.L} />
+            <RecordOdometerStack
+              wins={record.W}
+              draws={record.D}
+              losses={record.L}
+              animate={recordAnimationsActive}
+            />
           </div>
           <div
             className="dashboard-record-metrics grid min-h-0 grid-rows-3 gap-2.5"
@@ -625,7 +633,8 @@ function Dashboard({
                 value={winRate}
                 color={winRateColor(winRate)}
                 suffix="%"
-                delayMs={500}
+                delayMs={560}
+                active={recordAnimationsActive}
                 className="mt-0.5 text-lg sm:text-xl"
               />
             </DashboardMetricBox>
@@ -633,7 +642,8 @@ function Dashboard({
               <AnimatedCountUp
                 value={total}
                 color="var(--color-ink)"
-                delayMs={640}
+                delayMs={700}
+                active={recordAnimationsActive}
                 className="mt-0.5 text-lg sm:text-xl"
               />
             </DashboardMetricBox>
@@ -643,6 +653,7 @@ function Dashboard({
                 color={wlRatioColor}
                 signed
                 delayMs={780}
+                active={recordAnimationsActive}
                 className="mt-0.5 text-lg sm:text-xl"
               />
             </DashboardMetricBox>

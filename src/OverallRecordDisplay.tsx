@@ -14,6 +14,8 @@ type AnimatedCountUpProps = {
   signed?: boolean
   className?: string
   glow?: boolean
+  active?: boolean
+  durationMs?: number
 }
 
 const softGlowShadow = (color: string) =>
@@ -27,23 +29,35 @@ export function AnimatedCountUp({
   signed = false,
   className = 'text-[clamp(2.75rem,7vw,4.75rem)]',
   glow = false,
+  active = true,
+  durationMs = 1300,
 }: AnimatedCountUpProps) {
   const [displayValue, setDisplayValue] = useState(0)
   const [isAnimating, setIsAnimating] = useState(false)
   const frameRef = useRef<number | null>(null)
 
   useEffect(() => {
+    if (frameRef.current !== null) {
+      cancelAnimationFrame(frameRef.current)
+      frameRef.current = null
+    }
+
+    if (!active) {
+      setDisplayValue(0)
+      setIsAnimating(false)
+      return
+    }
+
     setDisplayValue(0)
     setIsAnimating(false)
 
     const startTimer = window.setTimeout(() => {
-      const duration = 1300
       const startedAt = performance.now()
 
       setIsAnimating(true)
 
       const tick = (now: number) => {
-        const progress = Math.min(1, (now - startedAt) / duration)
+        const progress = Math.min(1, (now - startedAt) / durationMs)
         const eased = 1 - (1 - progress) ** 3
         setDisplayValue(Math.round(value * eased))
 
@@ -52,6 +66,7 @@ export function AnimatedCountUp({
         } else {
           setDisplayValue(value)
           setIsAnimating(false)
+          frameRef.current = null
         }
       }
 
@@ -62,9 +77,10 @@ export function AnimatedCountUp({
       window.clearTimeout(startTimer)
       if (frameRef.current !== null) {
         cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
       }
     }
-  }, [delayMs, value])
+  }, [active, delayMs, durationMs, value])
 
   return (
     <p
@@ -88,6 +104,7 @@ type OverallRecordDisplayProps = {
   wins: number
   draws: number
   losses: number
+  animate?: boolean
 }
 
 export function RecordHeaderLabel() {
@@ -103,7 +120,7 @@ export function RecordHeaderLabel() {
   )
 }
 
-export function RecordOdometerStack({ wins, draws, losses }: OverallRecordDisplayProps) {
+export function RecordOdometerStack({ wins, draws, losses, animate = true }: OverallRecordDisplayProps) {
   const [fireworksActive, setFireworksActive] = useState(false)
   const prefersReducedMotion = useMemo(
     () =>
@@ -114,7 +131,7 @@ export function RecordOdometerStack({ wins, draws, losses }: OverallRecordDispla
   const celebratedRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (prefersReducedMotion) return
+    if (!animate || prefersReducedMotion) return
 
     const lastCelebrated = readLastWinMilestoneCelebrated()
     if (!shouldCelebrateWinMilestone(wins, lastCelebrated)) return
@@ -129,25 +146,46 @@ export function RecordOdometerStack({ wins, draws, losses }: OverallRecordDispla
     }, 1450)
 
     return () => window.clearTimeout(startTimer)
-  }, [prefersReducedMotion, wins])
+  }, [animate, prefersReducedMotion, wins])
 
   return (
     <div className="record-odometer-stack flex shrink-0 flex-col items-end leading-none">
       <div className="record-odometer-wins">
         <WinMilestoneFireworks active={fireworksActive} />
-        <AnimatedCountUp value={wins} color="#05CD99" delayMs={80} glow />
+        <AnimatedCountUp
+          value={wins}
+          color="#05CD99"
+          delayMs={120}
+          durationMs={1800}
+          glow
+          active={animate}
+        />
       </div>
-      <AnimatedCountUp value={draws} color="#FFB547" delayMs={220} glow />
-      <AnimatedCountUp value={losses} color="#EE5D50" delayMs={360} glow />
+      <AnimatedCountUp
+        value={draws}
+        color="#FFB547"
+        delayMs={280}
+        durationMs={1800}
+        glow
+        active={animate}
+      />
+      <AnimatedCountUp
+        value={losses}
+        color="#EE5D50"
+        delayMs={440}
+        durationMs={1800}
+        glow
+        active={animate}
+      />
     </div>
   )
 }
 
-export default function OverallRecordDisplay({ wins, draws, losses }: OverallRecordDisplayProps) {
+export default function OverallRecordDisplay({ wins, draws, losses, animate = true }: OverallRecordDisplayProps) {
   return (
     <div className="flex items-start gap-8 sm:gap-14 lg:gap-20">
       <RecordHeaderLabel />
-      <RecordOdometerStack wins={wins} draws={draws} losses={losses} />
+      <RecordOdometerStack wins={wins} draws={draws} losses={losses} animate={animate} />
     </div>
   )
 }
