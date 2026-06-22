@@ -42,6 +42,8 @@ export interface MatchComment {
 export interface Match {
   id: number
   date: string
+  /** Team the co-op was playing as for this match. Defaults to PSG for legacy entries. */
+  playedAs?: string
   opponent: string
   venue: 'home' | 'away'
   myScore: number
@@ -134,6 +136,7 @@ export interface VisionExtraction {
 
 export interface DraftMatch {
   date: string
+  playedAs?: string
   opponent: string
   venue: Venue
   myScore: number | null

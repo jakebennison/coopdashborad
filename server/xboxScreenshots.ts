@@ -35,6 +35,7 @@ export type { XboxScreenshotRecord } from './xboxScreenshotNormalize'
 type XboxExtractBody = {
   contentId?: string
   downloadUrl?: string
+  selectedTeam?: string
 }
 
 const openXblRequest = async (path: string, apiKey: string) => {
@@ -261,7 +262,14 @@ export async function handleXboxExtractMatchRequest(
     const screenshotArchiveKey = createXboxArchiveKey(contentId)
     await savePendingScreenshot(screenshotArchiveKey, imageBuffer, mediaType, 'xbox', contentId)
 
-    const extraction = await extractMatchFromImage(base64, mediaType, anthropicApiKey)
+    const selectedTeam = body.selectedTeam?.trim() || 'PSG'
+
+    const extraction = await extractMatchFromImage(
+      base64,
+      mediaType,
+      anthropicApiKey,
+      selectedTeam,
+    )
 
     sendJson(res, 200, {
       extraction,

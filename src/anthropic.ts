@@ -20,6 +20,7 @@ export const fileToBase64 = (file: File): Promise<string> =>
 
 export const extractMatchFromScreenshot = async (
   file: File,
+  selectedTeam = 'PSG',
 ): Promise<{ extraction: VisionExtraction; screenshotArchiveKey: string | null }> => {
   const base64 = await fileToBase64(file)
   const response = await fetch('/api/extract-match', {
@@ -30,6 +31,7 @@ export const extractMatchFromScreenshot = async (
     body: JSON.stringify({
       image: base64,
       mediaType: file.type || 'image/png',
+      selectedTeam,
     }),
   })
 

@@ -14,6 +14,11 @@ import {
   migrateMatchComments,
   readDefaultCommentAuthor,
 } from './commentUtils'
+import { getPrimaryGameDisplayName, normalizeTeamLabel } from './teamConfig'
+import {
+  LEGACY_DEFAULT_PLAYED_AS,
+  migrateMatchPlayedAs,
+} from './matchTeamUtils'
 import { buildStatsFromExtractedTeam, dateToInputValue, normalizeMatchDate, toStatNumber } from './statParsing'
 
 export { normalizeVisionExtraction, toStatNumber } from './statParsing'
@@ -42,10 +47,14 @@ export const statFields: Array<{ key: keyof MatchStats; label: string; suffix?: 
   { key: 'penaltyKicks', label: 'Penalty kicks' },
 ]
 
-export const normaliseTeamName = (name: string): string => {
-  if (name?.toLowerCase().includes('paris')) return 'PSG'
-  return name
-}
+export {
+  LEGACY_DEFAULT_PLAYED_AS,
+  filterMatchesByTeam,
+  getMatchPlayedAs,
+  migrateMatchPlayedAs,
+} from './matchTeamUtils'
+
+export const normaliseTeamName = (name: string): string => normalizeTeamLabel(name)
 
 export const createEmptyStats = (): MatchStats => ({
   possession: null,
@@ -87,7 +96,7 @@ export const readMatches = (): Match[] => {
   try {
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return (parsed as Match[]).map(migrateMatchComments)
+    return (parsed as Match[]).map((match) => migrateMatchPlayedAs(migrateMatchComments(match)))
   } catch {
     return []
   }
@@ -135,6 +144,7 @@ export const toMatch = (draft: DraftMatch): Match => {
   return {
     id: Date.now(),
     date: draft.date,
+    playedAs: normalizeTeamLabel(draft.playedAs?.trim() || LEGACY_DEFAULT_PLAYED_AS),
     opponent: normaliseTeamName(draft.opponent.trim() || 'Unknown opponent'),
     venue: draft.venue,
     myScore,
@@ -154,6 +164,7 @@ export const buildOpponentStatsFromExtraction = (
 
 export type ExtractionDraftOptions = {
   loggedVia?: LoggedVia
+  playedAs?: string
   xboxContentId?: string | null
   /** Xbox capture date or uploaded file date — when the match was played. */
   screenshotDate?: string | null
@@ -183,8 +194,9 @@ const resolveBothSideTeams = (
 
 const toOpponentTeam = (
   team: VisionExtraction['leftTeam'] | VisionExtraction['psg'],
+  fallbackName: string,
 ): ExtractedOpponentStats => ({
-  name: team && 'name' in team && team.name ? team.name : 'PARIS SG',
+  name: team && 'name' in team && team.name ? team.name : fallbackName,
   score: team?.score ?? null,
   possession: team?.possession ?? null,
   shots: team?.shots ?? null,
@@ -228,12 +240,15 @@ export const extractionToDraft = (
       ? extraction.psgSide
       : undefined)
 
+  const playedAs = normalizeTeamLabel(options?.playedAs?.trim() || LEGACY_DEFAULT_PLAYED_AS)
+
   if (extraction.psgSide === 'both' && playingSide) {
     const { myTeam, theirTeam } = resolveBothSideTeams(extraction, playingSide)
-    const opponentTeam = toOpponentTeam(theirTeam)
+    const opponentTeam = toOpponentTeam(theirTeam, getPrimaryGameDisplayName(playedAs))
 
     return {
       date: resolveDraftMatchDate(extraction, options),
+      playedAs,
       opponent: normaliseTeamName(opponentTeam.name),
       venue: playingSide === 'right' ? 'away' : 'home',
       myScore: toStatNumber(myTeam?.score),
@@ -252,6 +267,7 @@ export const extractionToDraft = (
 
   return {
     date: resolveDraftMatchDate(extraction, options),
+    playedAs,
     opponent: normaliseTeamName(extraction.opponent?.name ?? 'Unknown opponent'),
     venue: playingSide === 'right' ? 'away' : 'home',
     myScore: toStatNumber(extraction.psg?.score),
@@ -306,6 +322,7 @@ export const getFormTickerMatches = (matches: Match[]): Match[] => [
 ]
 
 export type ManualFormDraft = {
+  playedAs?: string
   opponent: string
   venue: Venue
   result: Result
@@ -329,6 +346,7 @@ export const createManualFormMatch = (draft: ManualFormDraft): Match => {
   return {
     id: Date.now(),
     date: dateToInputValue(new Date()),
+    playedAs: normalizeTeamLabel(draft.playedAs?.trim() || LEGACY_DEFAULT_PLAYED_AS),
     opponent: normaliseTeamName(draft.opponent.trim() || 'Unknown opponent'),
     venue: draft.venue,
     myScore,

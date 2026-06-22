@@ -122,6 +122,7 @@ export const fetchXboxScreenshots = async (importedIds: string[] = []) => {
 
 export const extractMatchFromXboxScreenshot = async (
   screenshot: Pick<XboxScreenshotItem, 'contentId' | 'downloadUrl'>,
+  selectedTeam = 'PSG',
 ) => {
   const response = await fetch('/api/xbox/extract-match', {
     method: 'POST',
@@ -131,6 +132,7 @@ export const extractMatchFromXboxScreenshot = async (
     body: JSON.stringify({
       contentId: screenshot.contentId,
       downloadUrl: screenshot.downloadUrl,
+      selectedTeam,
     }),
   })
 

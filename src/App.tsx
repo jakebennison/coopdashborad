@@ -26,6 +26,7 @@ import {
   getFormTickerMatches,
   getImportedXboxContentIds,
   getMatchRecord,
+  getMatchPlayedAs,
   getSeasonRecord,
   getTrackerRecord,
   getXgRecord,
@@ -65,8 +66,13 @@ import { applyTheme, getThemeColors, readTheme, type Theme } from './theme'
 import { hasSeenWelcomeIntroThisSession } from './welcomeIntroStorage'
 import { fetchUpdateNotes } from './updatesApi'
 import { getPendingUpdateAlert, markForcedUpdatesDismissed, markUpdatesSeen } from './updateNotificationUtils'
-
-const SEASON_CLUBS = ['Real Madrid', 'Manchester United', 'PSG'] as const
+import {
+  addPlayedTeam,
+  filterPresetTeams,
+  formatMatchTitle,
+  normalizeTeamLabel,
+} from './teamConfig'
+import { readPlayedTeams, readSelectedTeam, writePlayedTeams, writeSelectedTeam } from './teamStorage'
 import {
   buildDuplicateComparison,
   findDuplicateMatches,
@@ -155,6 +161,8 @@ function App() {
   const [updateNotes, setUpdateNotes] = useState<UpdateNote[]>([])
   const [alertUpdates, setAlertUpdates] = useState<UpdateNote[]>([])
   const [showUpdateAlert, setShowUpdateAlert] = useState(false)
+  const [playedTeams, setPlayedTeams] = useState<string[]>(() => readPlayedTeams())
+  const [selectedTeam, setSelectedTeam] = useState<string>(() => readSelectedTeam())
   const formMatches = useMemo(() => getFormTickerMatches(matches), [matches])
 
   useEffect(() => {
@@ -278,7 +286,10 @@ function App() {
   }
 
   const saveManualFormEntry = async (draft: ManualFormDraft) => {
-    const match = createManualFormMatch(draft)
+    const match = createManualFormMatch({
+      ...draft,
+      playedAs: draft.playedAs ?? selectedTeam,
+    })
 
     try {
       await createMatchRemote(match)
@@ -352,6 +363,26 @@ function App() {
     setAlertUpdates([])
   }
 
+  const handleSelectTeam = (team: string) => {
+    const label = normalizeTeamLabel(team)
+    if (!label) return
+
+    setSelectedTeam(label)
+    writeSelectedTeam(label)
+  }
+
+  const handleAddTeam = (team: string) => {
+    const label = normalizeTeamLabel(team)
+    if (!label) return
+
+    setPlayedTeams((current) => {
+      const next = addPlayedTeam(current, label)
+      writePlayedTeams(next)
+      return next
+    })
+    handleSelectTeam(label)
+  }
+
   const pageTitle =
     view === 'dashboard'
       ? 'CO-OP 26 Dashboard'
@@ -364,7 +395,7 @@ function App() {
             : view === 'updates'
               ? 'Tool updates'
               : selectedMatch
-              ? `PSG vs ${selectedMatch.opponent}`
+              ? formatMatchTitle(getMatchPlayedAs(selectedMatch), selectedMatch.opponent)
               : 'Match detail'
 
   return (
@@ -390,8 +421,8 @@ function App() {
         <aside className="card m-4 flex shrink-0 flex-col gap-8 p-5 lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:w-64 lg:self-start">
           <button type="button" className="text-left" onClick={() => setView('dashboard')}>
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-ink bg-[var(--color-primary-bg)] text-sm font-bold text-[var(--color-primary-text)]">
-                PSG
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-ink bg-[var(--color-primary-bg)] text-xs font-bold text-[var(--color-primary-text)]">
+                {selectedTeam.slice(0, 3).toUpperCase()}
               </div>
               <div>
                 <p className="record-display-font text-sm font-bold uppercase">Match Tracker</p>
@@ -471,6 +502,10 @@ function App() {
               matches={matches}
               theme={theme}
               recordAnimationsActive={!showWelcomeIntro}
+              playedTeams={playedTeams}
+              selectedTeam={selectedTeam}
+              onSelectTeam={handleSelectTeam}
+              onAddTeam={handleAddTeam}
               onAdd={() => setView('add')}
               onOpenMatch={openMatch}
               onAddManualFormEntry={saveManualFormEntry}
@@ -489,6 +524,7 @@ function App() {
               onSave={saveDraft}
               existingMatches={matches}
               importedXboxIds={getImportedXboxContentIds(matches)}
+              selectedTeam={selectedTeam}
             />
           )}
           {view === 'detail' && selectedMatch && (
@@ -541,6 +577,10 @@ function Dashboard({
   matches,
   theme,
   recordAnimationsActive,
+  playedTeams,
+  selectedTeam,
+  onSelectTeam,
+  onAddTeam,
   onAdd,
   onOpenMatch,
   onAddManualFormEntry,
@@ -548,6 +588,10 @@ function Dashboard({
   matches: Match[]
   theme: Theme
   recordAnimationsActive: boolean
+  playedTeams: string[]
+  selectedTeam: string
+  onSelectTeam: (team: string) => void
+  onAddTeam: (team: string) => void
   onAdd: () => void
   onOpenMatch: (match: Match) => void
   onAddManualFormEntry: (draft: ManualFormDraft) => void
@@ -659,7 +703,12 @@ function Dashboard({
             </DashboardMetricBox>
           </div>
           <div className="w-full shrink-0 xl:w-[15rem]">
-            <SeasonClubsPlayed clubs={SEASON_CLUBS} />
+            <SeasonClubsPlayed
+              teams={playedTeams}
+              selectedTeam={selectedTeam}
+              onSelectTeam={onSelectTeam}
+              onAddTeam={onAddTeam}
+            />
           </div>
         </div>
 
@@ -669,9 +718,12 @@ function Dashboard({
           longestUnbeatenRun={longestUnbeatenRun}
           longestWinningRun={longestWinningRun}
           trackerRecord={trackerRecord}
+          selectedTeam={selectedTeam}
           onAddManualEntry={onAddManualFormEntry}
         />
       </section>
+
+      <TeamRecordsBreakdown matches={matches} teams={playedTeams} />
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard label="Goals scored" value={goalsFor} />
@@ -820,7 +872,9 @@ function Dashboard({
                 </span>
                 <span>
                   <span className="block text-base font-semibold text-ink">
-                    {isManualFormMatch(match) ? `PSG vs ${match.opponent}` : match.opponent}
+                    {isManualFormMatch(match)
+                      ? formatMatchTitle(getMatchPlayedAs(match), match.opponent)
+                      : match.opponent}
                   </span>
                   <span className="mt-1 block text-sm text-muted">
                     {isManualFormMatch(match)
@@ -864,10 +918,12 @@ function AddMatch({
   onSave,
   existingMatches,
   importedXboxIds,
+  selectedTeam,
 }: {
   onSave: (draft: DraftMatch) => void
   existingMatches: Match[]
   importedXboxIds: string[]
+  selectedTeam: string
 }) {
   return (
     <main className={`${panelClass} overflow-hidden`}>
@@ -876,7 +932,7 @@ function AddMatch({
         <h2 className={`${headingClass} mt-1`}>Log a match</h2>
         <p className="mt-1 text-sm text-muted">
           Upload a stats screenshot or pick one from your Xbox EA FC library, then review before
-          saving.
+          saving. Currently playing as <span className="font-semibold text-ink">{selectedTeam}</span>.
         </p>
       </div>
       <div className="px-6 pb-6 pt-5">
@@ -884,6 +940,7 @@ function AddMatch({
           onSave={onSave}
           existingMatches={existingMatches}
           importedXboxIds={importedXboxIds}
+          selectedTeam={selectedTeam}
         />
       </div>
     </main>
@@ -896,10 +953,12 @@ function ScreenshotFlow({
   onSave,
   existingMatches,
   importedXboxIds,
+  selectedTeam,
 }: {
   onSave: (draft: DraftMatch) => void
   existingMatches: Match[]
   importedXboxIds: string[]
+  selectedTeam: string
 }) {
   const [source, setSource] = useState<MatchSource>('upload')
   const [isDragging, setIsDragging] = useState(false)
@@ -942,10 +1001,14 @@ function ScreenshotFlow({
     try {
       const options: ExtractionDraftOptions = {
         loggedVia: 'screenshot',
+        playedAs: selectedTeam,
         screenshotDate: fileDateToInputValue(file),
       }
       setExtractDraftOptions(options)
-      const { extraction: extracted, screenshotArchiveKey } = await extractMatchFromScreenshot(file)
+      const { extraction: extracted, screenshotArchiveKey } = await extractMatchFromScreenshot(
+        file,
+        selectedTeam,
+      )
       setExtractDraftOptions({ ...options, screenshotArchiveKey })
       if (extracted.psgSide === 'both') {
         setExtraction(extracted)
@@ -991,9 +1054,10 @@ function ScreenshotFlow({
 
     try {
       const { extraction: extracted, contentId, screenshotArchiveKey } =
-        await extractMatchFromXboxScreenshot(screenshot)
+        await extractMatchFromXboxScreenshot(screenshot, selectedTeam)
       const options: ExtractionDraftOptions = {
         loggedVia: 'xbox',
+        playedAs: selectedTeam,
         xboxContentId: contentId,
         screenshotDate: screenshot.captureDate,
         screenshotArchiveKey,
@@ -1056,6 +1120,7 @@ function ScreenshotFlow({
         existingMatches={existingMatches}
         onChange={setDraft}
         onSave={onSave}
+        playedAsTeam={draft.playedAs ?? selectedTeam}
         title="Review extracted match"
         description="Edit any score, opponent, venue, or stat before saving."
       />
@@ -1414,6 +1479,7 @@ function ReviewForm({
   existingMatches,
   onChange,
   onSave,
+  playedAsTeam,
   title,
   description,
 }: {
@@ -1421,6 +1487,7 @@ function ReviewForm({
   existingMatches: Match[]
   onChange: (draft: DraftMatch) => void
   onSave: (draft: DraftMatch) => void
+  playedAsTeam: string
   title: string
   description: string
 }) {
@@ -1543,7 +1610,7 @@ function ReviewForm({
 
       <section className="grid gap-3">
         <div>
-          <h4 className={headingClass}>PSG stats</h4>
+          <h4 className={headingClass}>{playedAsTeam} stats</h4>
           <p className="text-sm text-muted">Blank values will be saved as null.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1680,6 +1747,7 @@ function MatchDetail({
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const manualEntry = isManualFormMatch(match)
+  const playedAs = getMatchPlayedAs(match)
   const loggedViaLabel =
     match.loggedVia === 'manual-form'
       ? 'Manual form'
@@ -1732,7 +1800,9 @@ function MatchDetail({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-medium text-muted">{new Date(match.date).toLocaleDateString()}</p>
-            <h2 className={`${headingClass} mt-2 text-2xl sm:text-3xl`}>PSG vs {match.opponent}</h2>
+            <h2 className={`${headingClass} mt-2 text-2xl sm:text-3xl`}>
+              {formatMatchTitle(playedAs, match.opponent)}
+            </h2>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <VenueBadge venue={match.venue} />
               <ResultBadge result={match.result} />
@@ -1769,7 +1839,7 @@ function MatchDetail({
             </p>
             <img
               src={getMatchScreenshotUrl(match.id)}
-              alt={`Archived stats screenshot for PSG vs ${match.opponent}`}
+              alt={`Archived stats screenshot for ${formatMatchTitle(playedAs, match.opponent)}`}
               className="w-full border-t border-ink object-contain"
               loading="lazy"
             />
@@ -1823,6 +1893,7 @@ function FormTicker({
   longestUnbeatenRun,
   longestWinningRun,
   trackerRecord,
+  selectedTeam,
   onAddManualEntry,
 }: {
   matches: Match[]
@@ -1830,6 +1901,7 @@ function FormTicker({
   longestUnbeatenRun: StreakRunStats
   longestWinningRun: WinningRunStats
   trackerRecord: { W: number; D: number; L: number }
+  selectedTeam: string
   onAddManualEntry: (draft: ManualFormDraft) => void
 }) {
   const pageSize = 20
@@ -1948,7 +2020,7 @@ function FormTicker({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <p className="hidden text-xs font-medium text-muted sm:block">{viewLabel}</p>
-          <FormManualEntry onSubmit={onAddManualEntry} />
+          <FormManualEntry selectedTeam={selectedTeam} onSubmit={onAddManualEntry} />
         </div>
       </div>
 
@@ -2039,7 +2111,7 @@ function FormTicker({
             <div className="grid gap-3 sm:grid-cols-2">
               <RecordStreakCard
                 label="Longest unbeaten run"
-                club="PSG"
+                club={selectedTeam}
                 description="Most consecutive games without a loss"
                 stats={longestUnbeatenRun}
                 showBreakdown
@@ -2206,7 +2278,13 @@ function RecordStreakCard({
   )
 }
 
-function FormManualEntry({ onSubmit }: { onSubmit: (draft: ManualFormDraft) => void }) {
+function FormManualEntry({
+  selectedTeam,
+  onSubmit,
+}: {
+  selectedTeam: string
+  onSubmit: (draft: ManualFormDraft) => void
+}) {
   const [open, setOpen] = useState(false)
   const [opponent, setOpponent] = useState('')
   const [venue, setVenue] = useState<Venue>('home')
@@ -2257,6 +2335,7 @@ function FormManualEntry({ onSubmit }: { onSubmit: (draft: ManualFormDraft) => v
     }
 
     onSubmit({
+      playedAs: selectedTeam,
       opponent: trimmedOpponent,
       venue,
       result,
@@ -2320,7 +2399,9 @@ function FormManualEntry({ onSubmit }: { onSubmit: (draft: ManualFormDraft) => v
                   Teams
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="record-display-font shrink-0 text-xs font-bold uppercase sm:text-sm">PSG vs</span>
+                  <span className="record-display-font shrink-0 text-xs font-bold uppercase sm:text-sm">
+                    {selectedTeam} vs
+                  </span>
                   <input
                     id="manual-form-opponent"
                     value={opponent}
@@ -2417,11 +2498,12 @@ function FormMiniTile({ match }: { match: Match }) {
   const [showTooltip, setShowTooltip] = useState(false)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
   const manualEntry = isManualFormMatch(match)
+  const playedAs = getMatchPlayedAs(match)
   const resultLabel = match.result === 'W' ? 'Win' : match.result === 'D' ? 'Draw' : 'Loss'
   const venueLabel = match.venue === 'home' ? 'Home' : 'Away'
   const dateLabel = formatFormTileDate(match)
   const tooltipText = manualEntry
-    ? `${dateLabel} · ${resultLabel} · ${venueLabel} · PSG vs ${match.opponent}`
+    ? `${dateLabel} · ${resultLabel} · ${venueLabel} · ${formatMatchTitle(playedAs, match.opponent)}`
     : `${dateLabel} · ${resultLabel} · ${venueLabel} · ${match.opponent} ${match.myScore}-${match.opponentScore}`
   const tone = resultToTone(match.result)
 
@@ -2476,7 +2558,9 @@ function FormMiniTile({ match }: { match: Match }) {
           <p className="mt-0.5 text-[11px] font-medium text-muted">{dateLabel}</p>
           <p className="mt-0.5 text-xs font-medium text-ink">{venueLabel}</p>
           <p className="mt-1 text-[11px] text-muted">
-            {manualEntry ? `PSG vs ${match.opponent}` : `${match.opponent} · ${match.myScore}-${match.opponentScore}`}
+            {manualEntry
+              ? formatMatchTitle(getMatchPlayedAs(match), match.opponent)
+              : `${match.opponent} · ${match.myScore}-${match.opponentScore}`}
           </p>
           {manualEntry && match.manualEntryReason ? (
             <p className="mt-1 text-[11px] italic text-muted">{match.manualEntryReason}</p>
@@ -2488,18 +2572,133 @@ function FormMiniTile({ match }: { match: Match }) {
   )
 }
 
-function SeasonClubsPlayed({ clubs }: { clubs: readonly string[] }) {
+function SeasonClubsPlayed({
+  teams,
+  selectedTeam,
+  onSelectTeam,
+  onAddTeam,
+}: {
+  teams: string[]
+  selectedTeam: string
+  onSelectTeam: (team: string) => void
+  onAddTeam: (team: string) => void
+}) {
+  const [newTeam, setNewTeam] = useState('')
+  const suggestions = useMemo(
+    () => filterPresetTeams(newTeam, teams).slice(0, 8),
+    [newTeam, teams],
+  )
+
+  const submitNewTeam = () => {
+    const trimmed = newTeam.trim()
+    if (!trimmed) return
+    onAddTeam(trimmed)
+    setNewTeam('')
+  }
+
   return (
     <div className={`${innerBoxClass} h-full px-4 py-3`}>
-      <p className="record-display-font text-xs font-bold uppercase">Club&apos;s played AS</p>
+      <p className="record-display-font text-xs font-bold uppercase">Playing as</p>
+      <p className="mt-1 text-[10px] leading-relaxed text-muted">
+        Select your current team. New matches and screenshots use this team.
+      </p>
       <ul className="mt-3 grid gap-2">
-        {clubs.map((club) => (
-          <li key={club} className="badge-outline w-fit">
-            {club}
-          </li>
-        ))}
+        {teams.map((team) => {
+          const isSelected = team === selectedTeam
+
+          return (
+            <li key={team}>
+              <button
+                type="button"
+                onClick={() => onSelectTeam(team)}
+                className={`badge-outline w-full text-left transition ${
+                  isSelected ? 'border-[#05CD99] bg-[#05CD99]/10 font-semibold text-ink' : ''
+                }`}
+                aria-pressed={isSelected}
+              >
+                {team}
+                {isSelected ? <span className="ml-2 text-[10px] uppercase text-[#05CD99]">Active</span> : null}
+              </button>
+            </li>
+          )
+        })}
       </ul>
+
+      <div className="mt-4 border-t border-ink/20 pt-3">
+        <label className="record-display-font text-[10px] font-bold uppercase" htmlFor="add-team-input">
+          Add team
+        </label>
+        <div className="mt-2 flex gap-2">
+          <input
+            id="add-team-input"
+            list="team-preset-options"
+            value={newTeam}
+            onChange={(event) => setNewTeam(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                submitNewTeam()
+              }
+            }}
+            placeholder="Type club or country"
+            className={`${inputClass} min-w-0 flex-1 py-2 text-xs`}
+          />
+          <button
+            type="button"
+            onClick={submitNewTeam}
+            disabled={!newTeam.trim()}
+            className={`${secondaryButtonClass} shrink-0 px-3 py-2 text-xs disabled:opacity-40`}
+          >
+            Add
+          </button>
+        </div>
+        <datalist id="team-preset-options">
+          {suggestions.map((team) => (
+            <option key={team} value={team} />
+          ))}
+        </datalist>
+      </div>
     </div>
+  )
+}
+
+function TeamRecordsBreakdown({ matches, teams }: { matches: Match[]; teams: string[] }) {
+  const teamRecords = useMemo(
+    () =>
+      teams.map((team) => {
+        const teamMatches = matches.filter((match) => getMatchPlayedAs(match) === team)
+        const record = getMatchRecord(teamMatches)
+        const total = teamMatches.length
+
+        return { team, record, total }
+      }),
+    [matches, teams],
+  )
+
+  if (!teamRecords.length) return null
+
+  return (
+    <section className={`${panelClass} p-6`}>
+      <h2 className={headingClass}>Record by team</h2>
+      <p className="mt-1 text-sm text-muted">Win-draw-loss breakdown for each team you&apos;ve played as.</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {teamRecords.map(({ team, record, total }) => (
+          <div key={team} className="card-soft p-4">
+            <div className="flex items-start justify-between gap-3">
+              <p className="record-display-font text-xs font-bold uppercase">{team}</p>
+              <p className="number text-sm font-semibold text-ink">
+                {total} {total === 1 ? 'game' : 'games'}
+              </p>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <SplitRecordTile label="W" value={record.W} tone="win" />
+              <SplitRecordTile label="D" value={record.D} tone="draw" />
+              <SplitRecordTile label="L" value={record.L} tone="loss" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -2661,7 +2860,9 @@ function Settings({
                     <p className="text-sm font-medium text-muted">
                       {new Date(match.date).toLocaleDateString()}
                     </p>
-                    <p className="mt-1 text-base font-semibold text-ink">PSG vs {match.opponent}</p>
+                    <p className="mt-1 text-base font-semibold text-ink">
+                      {formatMatchTitle(getMatchPlayedAs(match), match.opponent)}
+                    </p>
                     <p className="mt-1 text-sm text-muted">
                       {isManualFormMatch(match)
                         ? `Manual form · ${match.result} · ${match.venue === 'home' ? 'Home' : 'Away'}`
@@ -2770,7 +2971,7 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
     <div className="grid place-items-center rounded-2xl border border-dashed border-ink bg-card p-8 text-center">
       <div>
         <p className="font-semibold text-ink">No match data yet</p>
-        <p className="mt-1 text-sm text-muted">Log your first PSG co-op seasons result.</p>
+        <p className="mt-1 text-sm text-muted">Log your first co-op seasons result.</p>
         <button type="button" onClick={onAdd} className={`${primaryButtonClass} mt-4`}>
           Add match
         </button>

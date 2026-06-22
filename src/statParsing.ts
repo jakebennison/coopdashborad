@@ -78,7 +78,11 @@ export const buildStatsFromExtractedTeam = (
   return stats
 }
 
-export const normalizeVisionExtraction = (extraction: VisionExtraction): VisionExtraction => {
+export const normalizeVisionExtraction = (
+  extraction: VisionExtraction,
+  selectedTeam = 'PSG',
+): VisionExtraction => {
+  const fallbackTeamName = selectedTeam.trim().toUpperCase() || 'PSG'
   const normalizeTeam = (team: ExtractedTeamStats | ExtractedOpponentStats | undefined) => {
     const built = buildStatsFromExtractedTeam(team)
     const name = 'name' in (team ?? {}) ? (team as ExtractedOpponentStats).name?.trim() : undefined
@@ -106,14 +110,14 @@ export const normalizeVisionExtraction = (extraction: VisionExtraction): VisionE
     if (extraction.leftTeam && extraction.rightTeam) {
       leftTeam = normalizeTeam(extraction.leftTeam) as ExtractedOpponentStats
       rightTeam = normalizeTeam(extraction.rightTeam) as ExtractedOpponentStats
-      leftTeam.name = extraction.leftTeam.name?.trim() || 'PARIS SG'
-      rightTeam.name = extraction.rightTeam.name?.trim() || 'PARIS SG'
+      leftTeam.name = extraction.leftTeam.name?.trim() || fallbackTeamName
+      rightTeam.name = extraction.rightTeam.name?.trim() || fallbackTeamName
     } else {
       // When leftTeam/rightTeam are missing, vision often maps the right column into `psg`.
       leftTeam = normalizeTeam(extraction.opponent) as ExtractedOpponentStats
       rightTeam = normalizeTeam(extraction.psg) as ExtractedOpponentStats
-      leftTeam.name = extraction.opponent?.name?.trim() || 'PARIS SG'
-      rightTeam.name = 'PARIS SG'
+      leftTeam.name = extraction.opponent?.name?.trim() || fallbackTeamName
+      rightTeam.name = fallbackTeamName
     }
   }
 

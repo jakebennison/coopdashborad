@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Match } from '../src/types'
 import { mergeMatchComments } from '../src/commentMerge'
+import { migrateMatchPlayedAs } from '../src/matchTeamUtils'
 import { initDatabase, isDatabaseConfigured, withDbClient } from './db'
 
 const DATA_DIR = path.join(process.cwd(), '.data')
@@ -17,20 +18,22 @@ const sortMatchesNewestFirst = (matches: Match[]) =>
   })
 
 const normalizeMatch = (match: Match): Match => {
-  if (match.comments?.length) {
-    return { ...match, comments: match.comments }
+  const withPlayedAs = migrateMatchPlayedAs(match)
+
+  if (withPlayedAs.comments?.length) {
+    return { ...withPlayedAs, comments: withPlayedAs.comments }
   }
 
-  const legacyComment = match.comment?.trim()
+  const legacyComment = withPlayedAs.comment?.trim()
   if (legacyComment) {
     return {
-      ...match,
+      ...withPlayedAs,
       comments: [
         {
-          id: `legacy-${match.id}`,
+          id: `legacy-${withPlayedAs.id}`,
           author: 'Co-op player',
           body: legacyComment,
-          createdAt: `${match.date}T12:00:00.000Z`,
+          createdAt: `${withPlayedAs.date}T12:00:00.000Z`,
           likes: 0,
           likedByMe: false,
           replies: [],
@@ -39,7 +42,7 @@ const normalizeMatch = (match: Match): Match => {
     }
   }
 
-  return { ...match, comments: [] }
+  return { ...withPlayedAs, comments: [] }
 }
 
 const readFileStore = async () => {

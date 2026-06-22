@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { normalizeVisionExtraction } from '../src/statParsing'
+import { getGameDisplayNames, getPrimaryGameDisplayName } from '../src/teamConfig'
 import type { VisionExtraction } from '../src/types'
 import { normalizeImageMediaType } from './imageMedia'
 import { normalizeEnvValue } from './env'
@@ -13,21 +14,30 @@ const DEFAULT_VISION_MODEL = 'claude-sonnet-4-6'
 const visionModel = () =>
   normalizeEnvValue(process.env.ANTHROPIC_VISION_MODEL) || DEFAULT_VISION_MODEL
 
-const visionPrompt = `This is a post-match stats screenshot from EA Sports FC on Xbox.
+const visionPrompt = (selectedTeam: string) => {
+  const teamLabel = selectedTeam.trim() || 'PSG'
+  const gameNames = getGameDisplayNames(teamLabel)
+  const primaryName = getPrimaryGameDisplayName(teamLabel)
+  const aliasList = gameNames.length > 1 ? gameNames.join(' or ') : primaryName
+  const exampleOpponent = teamLabel === 'France' ? 'BRAZIL' : 'BRAZIL'
+  const exampleScore =
+    teamLabel === 'France' ? `${exampleOpponent} 1 : 2 ${primaryName}` : `${exampleOpponent} 1 : 2 ${primaryName}`
+
+  return `This is a post-match stats screenshot from EA Sports FC on Xbox.
 
 Valid screenshots look like the EA FC post-match Summary screen:
 - Horizontal tabs near the top: Summary, Possession, Shooting, Passing, Defending, Events (Summary is usually selected)
-- Team names and crests at the top with the final score between them (example: BRAZIL 1 : 2 PARIS SG)
+- Team names and crests at the top with the final score between them (example: ${exampleScore})
 - A central two-column stats table comparing both teams
 - Circular percentage gauges on the sides for Dribble Success Rate, Shot Accuracy, and Pass Accuracy
 - If this is NOT that post-match stats Summary screen, still return JSON but set psgSide to "invalid"
 
-The team name for PSG appears as "PARIS SG" in this game.
-Identify which side PARIS SG is on (left or right). If PARIS SG appears on both sides, return psgSide as "both".
-If PARIS SG is not visible anywhere, return psgSide as "invalid".
-PSG on left = home, PSG on right = away.
+The selected co-op team is "${teamLabel}". In this game it usually appears as ${aliasList}.
+Identify which side ${aliasList} is on (left or right). If ${aliasList} appears on both sides, return psgSide as "both".
+If ${aliasList} is not visible anywhere, return psgSide as "invalid".
+${teamLabel} on left = home, ${teamLabel} on right = away.
 
-When psgSide is "both" (same club on both sides, e.g. co-op PSG vs PSG):
+When psgSide is "both" (same team on both sides, e.g. co-op ${teamLabel} vs ${teamLabel}):
 - Extract stats for BOTH screen columns separately.
 - Put the LEFT column team in leftTeam AND in psg.
 - Put the RIGHT column team in rightTeam AND in opponent.
@@ -94,6 +104,7 @@ Return ONLY valid JSON, no markdown, no preamble:
   }
 }
 Use null for any field not visible. Return only the JSON object.`
+}
 
 type AnthropicTextBlock = {
   type: 'text'
@@ -107,6 +118,7 @@ type AnthropicResponse = {
 type ExtractRequestBody = {
   image?: string
   mediaType?: string
+  selectedTeam?: string
 }
 
 const extractJson = (text: string): VisionExtraction => {
@@ -125,6 +137,7 @@ export async function extractMatchFromImage(
   image: string,
   mediaType: string,
   apiKey: string,
+  selectedTeam = 'PSG',
 ): Promise<VisionExtraction> {
   const trimmedKey = apiKey.trim()
   if (!trimmedKey) {
@@ -165,7 +178,7 @@ export async function extractMatchFromImage(
             },
             {
               type: 'text',
-              text: visionPrompt,
+              text: visionPrompt(selectedTeam),
             },
           ],
         },
@@ -194,10 +207,12 @@ export async function extractMatchFromImage(
     .map((block) => block.text)
     .join('\n')
 
-  const extraction = normalizeVisionExtraction(extractJson(text))
+  const extraction = normalizeVisionExtraction(extractJson(text), selectedTeam)
+  const teamLabel = selectedTeam.trim() || 'PSG'
+  const gameName = getPrimaryGameDisplayName(teamLabel)
   if (extraction.psgSide === 'invalid' || !['left', 'right', 'both'].includes(extraction.psgSide)) {
     throw new Error(
-      'This does not look like an EA FC post-match Summary stats screen with PARIS SG.',
+      `This does not look like an EA FC post-match Summary stats screen with ${gameName}.`,
     )
   }
 
@@ -249,10 +264,13 @@ export async function handleExtractMatchRequest(
     const screenshotArchiveKey = createUploadArchiveKey()
     await savePendingScreenshot(screenshotArchiveKey, imageBuffer, mediaType, 'upload')
 
+    const selectedTeam = body.selectedTeam?.trim() || 'PSG'
+
     const extraction = await extractMatchFromImage(
       body.image ?? '',
       mediaType,
       apiKey,
+      selectedTeam,
     )
 
     res.statusCode = 200

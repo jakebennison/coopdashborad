@@ -87,9 +87,10 @@ export const buildDuplicateComparison = (
   for (const field of statFields) {
     const draftValue = draft.stats?.[field.key] ?? null
     const existingValue = match.stats?.[field.key] ?? null
+    const teamLabel = draft.playedAs?.trim() || match.playedAs?.trim() || 'PSG'
 
     rows.push({
-      label: `PSG ${field.label}`,
+      label: `${teamLabel} ${field.label}`,
       draftValue: formatStatValue(draftValue, field.suffix),
       existingValue: formatStatValue(existingValue, field.suffix),
       matches: statValueEqual(draftValue, existingValue),
