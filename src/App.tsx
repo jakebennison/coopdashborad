@@ -2619,28 +2619,32 @@ function SeasonClubsPlayed({
           const isSelected = team === selectedTeam
 
           return (
-            <li key={team} className="flex items-stretch gap-1.5">
+            <li key={team} className="group relative">
               <button
                 type="button"
                 onClick={() => onSelectTeam(team)}
-                className={`badge-outline min-w-0 flex-1 text-left text-sm transition ${
-                  isSelected ? 'border-[#05CD99] bg-[#05CD99]/10 font-semibold text-ink' : ''
-                }`}
+                className={`badge-outline w-full text-left text-sm transition ${
+                  canRemove ? 'pr-6' : ''
+                } ${isSelected ? 'border-[#05CD99] bg-[#05CD99]/10 font-semibold text-ink' : ''}`}
                 aria-pressed={isSelected}
               >
                 {team}
                 {isSelected ? <span className="ml-2 text-[10px] uppercase text-[#05CD99]">Active</span> : null}
               </button>
-              <button
-                type="button"
-                onClick={() => onRemoveTeam(team)}
-                disabled={!canRemove}
-                aria-label={`Remove ${team}`}
-                title={canRemove ? `Remove ${team}` : 'Keep at least one team'}
-                className="record-display-font shrink-0 rounded-md border border-ink px-2 text-xs font-bold text-muted transition hover:border-[#EE5D50] hover:text-[#EE5D50] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-ink disabled:hover:text-muted"
-              >
-                ✕
-              </button>
+              {canRemove ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onRemoveTeam(team)
+                  }}
+                  aria-label={`Remove ${team}`}
+                  title={`Remove ${team}`}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-0.5 text-[9px] leading-none text-muted/30 transition hover:text-[#EE5D50] group-hover:text-muted/55"
+                >
+                  ×
+                </button>
+              ) : null}
             </li>
           )
         })}
