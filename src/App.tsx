@@ -1,4 +1,4 @@
-import type { FormEvent, ReactNode } from 'react'
+import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   CartesianGrid,
@@ -68,9 +68,9 @@ import { fetchUpdateNotes } from './updatesApi'
 import { getPendingUpdateAlert, markForcedUpdatesDismissed, markUpdatesSeen } from './updateNotificationUtils'
 import {
   addPlayedTeam,
-  filterPresetTeams,
   formatMatchTitle,
   normalizeTeamLabel,
+  searchPresetTeams,
 } from './teamConfig'
 import { readPlayedTeams, readSelectedTeam, writePlayedTeams, writeSelectedTeam } from './teamStorage'
 import {
@@ -658,7 +658,7 @@ function Dashboard({
   return (
     <main className="grid gap-6">
       <section className={`${panelClass} p-6`}>
-        <div className="dashboard-record-header grid grid-cols-1 gap-8 xl:grid-cols-[auto_auto_minmax(9.5rem,10rem)_15rem] xl:items-start xl:gap-x-12 xl:gap-y-0">
+        <div className="dashboard-record-header grid grid-cols-1 gap-8 xl:grid-cols-[auto_auto_minmax(9.5rem,10rem)_12rem] xl:items-start xl:gap-x-12 xl:gap-y-0">
           <RecordHeaderLabel />
           <div ref={odometerRef} className="shrink-0">
             <RecordOdometerStack
@@ -702,15 +702,19 @@ function Dashboard({
               />
             </DashboardMetricBox>
           </div>
-          <div className="w-full shrink-0 xl:w-[15rem]">
+          <div
+            className="w-full shrink-0 xl:w-[12rem]"
+            style={metricsHeight ? { height: metricsHeight } : undefined}
+          >
             <SeasonClubsPlayed
               teams={playedTeams}
               selectedTeam={selectedTeam}
               onSelectTeam={onSelectTeam}
-              onAddTeam={onAddTeam}
             />
           </div>
         </div>
+
+        <AddTeamField teams={playedTeams} onAddTeam={onAddTeam} />
 
         <FormTicker
           matches={formMatches}
@@ -2576,33 +2580,15 @@ function SeasonClubsPlayed({
   teams,
   selectedTeam,
   onSelectTeam,
-  onAddTeam,
 }: {
   teams: string[]
   selectedTeam: string
   onSelectTeam: (team: string) => void
-  onAddTeam: (team: string) => void
 }) {
-  const [newTeam, setNewTeam] = useState('')
-  const suggestions = useMemo(
-    () => filterPresetTeams(newTeam, teams).slice(0, 8),
-    [newTeam, teams],
-  )
-
-  const submitNewTeam = () => {
-    const trimmed = newTeam.trim()
-    if (!trimmed) return
-    onAddTeam(trimmed)
-    setNewTeam('')
-  }
-
   return (
-    <div className={`${innerBoxClass} h-full px-4 py-3`}>
-      <p className="record-display-font text-xs font-bold uppercase">Playing as</p>
-      <p className="mt-1 text-[10px] leading-relaxed text-muted">
-        Select your current team. New matches and screenshots use this team.
-      </p>
-      <ul className="mt-3 grid gap-2">
+    <div className={`${innerBoxClass} flex h-full min-h-0 flex-col px-4 py-3`}>
+      <p className="record-display-font shrink-0 text-xs font-bold uppercase">Playing as</p>
+      <ul className="mt-3 grid min-h-0 flex-1 gap-2 overflow-y-auto pr-1">
         {teams.map((team) => {
           const isSelected = team === selectedTeam
 
@@ -2611,7 +2597,7 @@ function SeasonClubsPlayed({
               <button
                 type="button"
                 onClick={() => onSelectTeam(team)}
-                className={`badge-outline w-full text-left transition ${
+                className={`badge-outline w-full text-left text-sm transition ${
                   isSelected ? 'border-[#05CD99] bg-[#05CD99]/10 font-semibold text-ink' : ''
                 }`}
                 aria-pressed={isSelected}
@@ -2623,41 +2609,177 @@ function SeasonClubsPlayed({
           )
         })}
       </ul>
+    </div>
+  )
+}
 
-      <div className="mt-4 border-t border-ink/20 pt-3">
-        <label className="record-display-font text-[10px] font-bold uppercase" htmlFor="add-team-input">
-          Add team
-        </label>
-        <div className="mt-2 flex gap-2">
+function AddTeamField({
+  teams,
+  onAddTeam,
+}: {
+  teams: string[]
+  onAddTeam: (team: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  const suggestions = useMemo(() => searchPresetTeams(query, teams), [query, teams])
+
+  const flatSuggestions = useMemo(
+    () => [...suggestions.nationals, ...suggestions.clubs],
+    [suggestions.nationals, suggestions.clubs],
+  )
+
+  const suggestionEntries = useMemo(() => {
+    const entries: Array<
+      { kind: 'heading'; label: string } | { kind: 'team'; team: string; index: number }
+    > = []
+    let index = 0
+
+    if (suggestions.nationals.length) {
+      entries.push({ kind: 'heading', label: 'International teams' })
+      for (const team of suggestions.nationals) {
+        entries.push({ kind: 'team', team, index })
+        index += 1
+      }
+    }
+
+    if (suggestions.clubs.length) {
+      entries.push({ kind: 'heading', label: 'Clubs' })
+      for (const team of suggestions.clubs) {
+        entries.push({ kind: 'team', team, index })
+        index += 1
+      }
+    }
+
+    return entries
+  }, [suggestions.clubs, suggestions.nationals])
+
+  const showSuggestions = open && query.trim().length > 0 && flatSuggestions.length > 0
+
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [query, flatSuggestions.length])
+
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown)
+    return () => window.removeEventListener('mousedown', handlePointerDown)
+  }, [open])
+
+  const submitTeam = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed) return
+    onAddTeam(trimmed)
+    setQuery('')
+    setOpen(false)
+  }
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      if (!flatSuggestions.length) return
+      setActiveIndex((index) => (index + 1) % flatSuggestions.length)
+      return
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      if (!flatSuggestions.length) return
+      setActiveIndex((index) => (index - 1 + flatSuggestions.length) % flatSuggestions.length)
+      return
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      if (showSuggestions && flatSuggestions[activeIndex]) {
+        submitTeam(flatSuggestions[activeIndex])
+        return
+      }
+      submitTeam(query)
+      return
+    }
+
+    if (event.key === 'Escape') {
+      setOpen(false)
+    }
+  }
+
+  return (
+    <div ref={rootRef} className="relative mt-4 border-t border-ink/15 pt-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <label className="min-w-0 flex-1">
+          <span className="record-display-font text-[10px] font-bold uppercase">Add team</span>
           <input
             id="add-team-input"
-            list="team-preset-options"
-            value={newTeam}
-            onChange={(event) => setNewTeam(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                submitNewTeam()
-              }
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value)
+              setOpen(true)
             }}
-            placeholder="Type club or country"
-            className={`${inputClass} min-w-0 flex-1 py-2 text-xs`}
+            onFocus={() => setOpen(true)}
+            onKeyDown={handleKeyDown}
+            placeholder="Start typing a club or country…"
+            autoComplete="off"
+            spellCheck={false}
+            className={`${inputClass} mt-2 w-full py-2 text-sm`}
+            role="combobox"
+            aria-expanded={showSuggestions}
+            aria-controls="add-team-suggestions"
+            aria-autocomplete="list"
           />
-          <button
-            type="button"
-            onClick={submitNewTeam}
-            disabled={!newTeam.trim()}
-            className={`${secondaryButtonClass} shrink-0 px-3 py-2 text-xs disabled:opacity-40`}
-          >
-            Add
-          </button>
-        </div>
-        <datalist id="team-preset-options">
-          {suggestions.map((team) => (
-            <option key={team} value={team} />
-          ))}
-        </datalist>
+        </label>
+        <button
+          type="button"
+          onClick={() => submitTeam(query)}
+          disabled={!query.trim()}
+          className={`${secondaryButtonClass} shrink-0 px-4 py-2 text-sm disabled:opacity-40`}
+        >
+          Add
+        </button>
       </div>
+
+      {showSuggestions ? (
+        <ul
+          id="add-team-suggestions"
+          role="listbox"
+          className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-xl border border-ink bg-card py-1 shadow-lg sm:right-auto sm:w-full"
+        >
+          {suggestionEntries.map((entry) =>
+            entry.kind === 'heading' ? (
+              <li key={entry.label} className="px-3 py-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-muted">{entry.label}</p>
+              </li>
+            ) : (
+              <li key={entry.team}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={entry.index === activeIndex}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => submitTeam(entry.team)}
+                  className={`flex w-full px-3 py-2 text-left text-sm transition ${
+                    entry.index === activeIndex
+                      ? 'bg-soft font-semibold text-ink'
+                      : 'text-ink hover:bg-soft/70'
+                  }`}
+                >
+                  {entry.team}
+                </button>
+              </li>
+            ),
+          )}
+        </ul>
+      ) : null}
     </div>
   )
 }

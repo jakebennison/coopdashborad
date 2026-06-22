@@ -110,6 +110,38 @@ export const NATIONAL_TEAMS = [
   'United States',
   'Uruguay',
   'Wales',
+  'Costa Rica',
+  'Paraguay',
+  'Peru',
+  'Venezuela',
+  'Bolivia',
+  'Panama',
+  'Jamaica',
+  'New Zealand',
+  'China',
+  'India',
+  'Indonesia',
+  'Thailand',
+  'Vietnam',
+  'UAE',
+  'Iraq',
+  'Jordan',
+  'Lebanon',
+  'Syria',
+  'Kuwait',
+  'Oman',
+  'Bahrain',
+  'Libya',
+  'Kenya',
+  'Zambia',
+  'Mali',
+  'Guinea',
+  'DR Congo',
+  'Angola',
+  'Zimbabwe',
+  'Uganda',
+  'Tanzania',
+  'Ethiopia',
 ] as const
 
 /** In-game EA FC display names for known teams (uppercase as shown on screen). */
@@ -207,13 +239,51 @@ export const addPlayedTeam = (teams: string[], newTeam: string): string[] => {
   return exists ? teams : [...teams, label]
 }
 
-export const filterPresetTeams = (query: string, exclude: string[] = []): string[] => {
+const teamSearchScore = (name: string, needle: string): number | null => {
+  const lower = name.toLowerCase()
+  if (lower.startsWith(needle)) return 0
+  if (lower.split(/\s+/).some((word) => word.startsWith(needle))) return 1
+  if (lower.includes(needle)) return 2
+  return null
+}
+
+const rankPresetMatches = (
+  list: readonly string[],
+  needle: string,
+  excluded: Set<string>,
+  limit: number,
+) =>
+  list
+    .filter((team) => !excluded.has(team.toLowerCase()))
+    .map((team) => ({ team, score: teamSearchScore(team, needle) }))
+    .filter((entry): entry is { team: string; score: number } => entry.score !== null)
+    .sort((left, right) => left.score - right.score || left.team.localeCompare(right.team))
+    .slice(0, limit)
+    .map((entry) => entry.team)
+
+export type TeamSearchResults = {
+  nationals: string[]
+  clubs: string[]
+}
+
+export const searchPresetTeams = (
+  query: string,
+  exclude: string[] = [],
+  limitPerGroup = 6,
+): TeamSearchResults => {
   const needle = query.trim().toLowerCase()
+  if (!needle) return { nationals: [], clubs: [] }
+
   const excluded = new Set(exclude.map((team) => team.toLowerCase()))
 
-  return ALL_TEAM_PRESETS.filter((team) => {
-    if (excluded.has(team.toLowerCase())) return false
-    if (!needle) return true
-    return team.toLowerCase().includes(needle)
-  })
+  return {
+    nationals: rankPresetMatches(NATIONAL_TEAMS, needle, excluded, limitPerGroup),
+    clubs: rankPresetMatches(MAJOR_CLUBS, needle, excluded, limitPerGroup),
+  }
+}
+
+/** @deprecated Use searchPresetTeams for typeahead UI */
+export const filterPresetTeams = (query: string, exclude: string[] = []): string[] => {
+  const { nationals, clubs } = searchPresetTeams(query, exclude, 50)
+  return [...nationals, ...clubs]
 }
