@@ -70,6 +70,7 @@ import {
   addPlayedTeam,
   formatMatchTitle,
   normalizeTeamLabel,
+  removePlayedTeam,
   searchPresetTeams,
 } from './teamConfig'
 import { readPlayedTeams, readSelectedTeam, writePlayedTeams, writeSelectedTeam } from './teamStorage'
@@ -383,6 +384,23 @@ function App() {
     handleSelectTeam(label)
   }
 
+  const handleRemoveTeam = (team: string) => {
+    const label = normalizeTeamLabel(team)
+    if (!label) return
+
+    const next = removePlayedTeam(playedTeams, label)
+    if (next.length === playedTeams.length) return
+
+    writePlayedTeams(next)
+    setPlayedTeams(next)
+
+    if (selectedTeam.toLowerCase() === label.toLowerCase()) {
+      const replacement = next[0]
+      setSelectedTeam(replacement)
+      writeSelectedTeam(replacement)
+    }
+  }
+
   const pageTitle =
     view === 'dashboard'
       ? 'CO-OP 26 Dashboard'
@@ -506,6 +524,7 @@ function App() {
               selectedTeam={selectedTeam}
               onSelectTeam={handleSelectTeam}
               onAddTeam={handleAddTeam}
+              onRemoveTeam={handleRemoveTeam}
               onAdd={() => setView('add')}
               onOpenMatch={openMatch}
               onAddManualFormEntry={saveManualFormEntry}
@@ -581,6 +600,7 @@ function Dashboard({
   selectedTeam,
   onSelectTeam,
   onAddTeam,
+  onRemoveTeam,
   onAdd,
   onOpenMatch,
   onAddManualFormEntry,
@@ -592,6 +612,7 @@ function Dashboard({
   selectedTeam: string
   onSelectTeam: (team: string) => void
   onAddTeam: (team: string) => void
+  onRemoveTeam: (team: string) => void
   onAdd: () => void
   onOpenMatch: (match: Match) => void
   onAddManualFormEntry: (draft: ManualFormDraft) => void
@@ -710,6 +731,7 @@ function Dashboard({
               teams={playedTeams}
               selectedTeam={selectedTeam}
               onSelectTeam={onSelectTeam}
+              onRemoveTeam={onRemoveTeam}
             />
           </div>
         </div>
@@ -727,7 +749,7 @@ function Dashboard({
         />
       </section>
 
-      <TeamRecordsBreakdown matches={matches} teams={playedTeams} />
+      <TeamRecordsBreakdown matches={matches} />
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard label="Goals scored" value={goalsFor} />
@@ -2580,11 +2602,15 @@ function SeasonClubsPlayed({
   teams,
   selectedTeam,
   onSelectTeam,
+  onRemoveTeam,
 }: {
   teams: string[]
   selectedTeam: string
   onSelectTeam: (team: string) => void
+  onRemoveTeam: (team: string) => void
 }) {
+  const canRemove = teams.length > 1
+
   return (
     <div className={`${innerBoxClass} flex h-full min-h-0 flex-col px-4 py-3`}>
       <p className="record-display-font shrink-0 text-xs font-bold uppercase">Playing as</p>
@@ -2593,17 +2619,27 @@ function SeasonClubsPlayed({
           const isSelected = team === selectedTeam
 
           return (
-            <li key={team}>
+            <li key={team} className="flex items-stretch gap-1.5">
               <button
                 type="button"
                 onClick={() => onSelectTeam(team)}
-                className={`badge-outline w-full text-left text-sm transition ${
+                className={`badge-outline min-w-0 flex-1 text-left text-sm transition ${
                   isSelected ? 'border-[#05CD99] bg-[#05CD99]/10 font-semibold text-ink' : ''
                 }`}
                 aria-pressed={isSelected}
               >
                 {team}
                 {isSelected ? <span className="ml-2 text-[10px] uppercase text-[#05CD99]">Active</span> : null}
+              </button>
+              <button
+                type="button"
+                onClick={() => onRemoveTeam(team)}
+                disabled={!canRemove}
+                aria-label={`Remove ${team}`}
+                title={canRemove ? `Remove ${team}` : 'Keep at least one team'}
+                className="record-display-font shrink-0 rounded-md border border-ink px-2 text-xs font-bold text-muted transition hover:border-[#EE5D50] hover:text-[#EE5D50] disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-ink disabled:hover:text-muted"
+              >
+                ✕
               </button>
             </li>
           )
@@ -2784,25 +2820,33 @@ function AddTeamField({
   )
 }
 
-function TeamRecordsBreakdown({ matches, teams }: { matches: Match[]; teams: string[] }) {
-  const teamRecords = useMemo(
-    () =>
-      teams.map((team) => {
-        const teamMatches = matches.filter((match) => getMatchPlayedAs(match) === team)
-        const record = getMatchRecord(teamMatches)
-        const total = teamMatches.length
+function TeamRecordsBreakdown({ matches }: { matches: Match[] }) {
+  const teamRecords = useMemo(() => {
+    const byTeam = new Map<string, Match[]>()
 
-        return { team, record, total }
-      }),
-    [matches, teams],
-  )
+    for (const match of matches) {
+      const team = getMatchPlayedAs(match)
+      const teamMatches = byTeam.get(team) ?? []
+      teamMatches.push(match)
+      byTeam.set(team, teamMatches)
+    }
+
+    return [...byTeam.entries()]
+      .map(([team, teamMatches]) => ({
+        team,
+        record: getMatchRecord(teamMatches),
+        total: teamMatches.length,
+      }))
+      .filter(({ total }) => total > 0)
+      .sort((left, right) => right.total - left.total || left.team.localeCompare(right.team))
+  }, [matches])
 
   if (!teamRecords.length) return null
 
   return (
     <section className={`${panelClass} p-6`}>
       <h2 className={headingClass}>Record by team</h2>
-      <p className="mt-1 text-sm text-muted">Win-draw-loss breakdown for each team you&apos;ve played as.</p>
+      <p className="mt-1 text-sm text-muted">Win-draw-loss breakdown for teams with logged matches.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {teamRecords.map(({ team, record, total }) => (
           <div key={team} className="card-soft p-4">

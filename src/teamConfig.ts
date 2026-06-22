@@ -239,6 +239,13 @@ export const addPlayedTeam = (teams: string[], newTeam: string): string[] => {
   return exists ? teams : [...teams, label]
 }
 
+export const removePlayedTeam = (teams: string[], teamToRemove: string): string[] => {
+  const label = normalizeTeamLabel(teamToRemove)
+  if (!label || teams.length <= 1) return teams
+
+  return teams.filter((team) => team.toLowerCase() !== label.toLowerCase())
+}
+
 const teamSearchScore = (name: string, needle: string): number | null => {
   const lower = name.toLowerCase()
   if (lower.startsWith(needle)) return 0
