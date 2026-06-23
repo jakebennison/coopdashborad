@@ -749,8 +749,6 @@ function Dashboard({
         />
       </section>
 
-      <TeamRecordsBreakdown matches={matches} />
-
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard label="Goals scored" value={goalsFor} />
         <MetricCard label="Goals conceded" value={goalsAgainst} />
@@ -758,6 +756,8 @@ function Dashboard({
         <MetricCard label="Avg possession" value={avgPossession} suffix="%" />
         <MetricCard label="Avg xG" value={avgXg} decimals={1} footer={<XgRecordText record={xgRecord} />} />
       </section>
+
+      <TeamRecordsBreakdown matches={matches} />
 
       <section className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <div className={`${panelClass} p-6`}>
