@@ -7,7 +7,7 @@ export const DISMISSED_FORCED_UPDATE_IDS_KEY = 'coop26-dismissed-forced-update-i
 export const UPDATE_ALERT_MIN_COUNT = 5
 
 /** Changelog ids that should notify immediately, below the minimum count. */
-export const FORCE_NOTIFICATION_UPDATE_IDS = new Set<number>([2026061228])
+export const FORCE_NOTIFICATION_UPDATE_IDS = new Set<number>([2026061228, 2026062301])
 
 const sortUpdatesNewestFirst = (updates: UpdateNote[]) =>
   [...updates].sort((a, b) => b.id - a.id || b.date.localeCompare(a.date))

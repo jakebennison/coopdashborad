@@ -4,6 +4,19 @@ type SeedUpdateNote = Omit<UpdateNote, 'createdAt'>
 
 export const UPDATE_NOTES_SEED: SeedUpdateNote[] = [
   {
+    id: 2026062301,
+    date: '2026-06-23',
+    title: 'Multi-team support and playing-as controls',
+    body: `Switch between clubs and international teams without losing your season history.
+
+• Choose your active team in Playing as — France is the default for new sessions
+• Add clubs or countries with typeahead search (internationals and major clubs)
+• Remove teams with a discreet × control (at least one team always stays)
+• Record by team only shows teams with logged matches
+• Screenshot and Xbox imports detect whichever team is currently selected
+• Bookmark title updated to Co-op 26 Dashboard`,
+  },
+  {
     id: 2026061232,
     date: '2026-06-12',
     title: 'Cleaner dashboard update alert',
