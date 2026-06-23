@@ -49,9 +49,14 @@ export const statFields: Array<{ key: keyof MatchStats; label: string; suffix?: 
 
 export {
   LEGACY_DEFAULT_PLAYED_AS,
+  OVERALL_TEAM_SCOPE,
   filterMatchesByTeam,
+  filterMatchesByTeamScope,
   getMatchPlayedAs,
+  getStatsTeamLabel,
+  getTeamsFromMatches,
   migrateMatchPlayedAs,
+  type TeamScope,
 } from './matchTeamUtils'
 
 export const normaliseTeamName = (name: string): string => normalizeTeamLabel(name)

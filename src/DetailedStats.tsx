@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState, createContext, useContext } from 'react'
 import {
   Bar,
   BarChart,
@@ -37,6 +37,14 @@ import {
   type DatedWinStreak,
   type StreakRunStats,
 } from './matchUtils'
+import {
+  filterMatchesByTeamScope,
+  getMatchPlayedAs,
+  getStatsTeamLabel,
+  getTeamsFromMatches,
+  OVERALL_TEAM_SCOPE,
+  type TeamScope,
+} from './matchTeamUtils'
 
 import {
   buildXgAnalysis,
@@ -59,6 +67,20 @@ const streakWinBackground = 'linear-gradient(145deg, #06D6A0 0%, #05CD99 100%)'
 const streakDrawBackground = 'linear-gradient(145deg, #FFC766 0%, #FFB547 100%)'
 const streakRunBadgeClass =
   'record-display-font shrink-0 rounded-sm border border-ink px-3 py-1.5 text-sm text-white sm:text-base'
+
+type StatsTeamScopeContextValue = {
+  teamScope: TeamScope
+  teamLabel: string
+}
+
+const StatsTeamScopeContext = createContext<StatsTeamScopeContextValue>({
+  teamScope: OVERALL_TEAM_SCOPE,
+  teamLabel: 'Team',
+})
+
+const useStatsTeamScope = () => useContext(StatsTeamScopeContext)
+
+const useStatsTeamLabel = () => useContext(StatsTeamScopeContext).teamLabel
 
 const winDrawGradient = (wins: number, draws: number) => {
   const total = wins + draws
@@ -103,6 +125,8 @@ function MatchInsightPanel({
   decimals?: number
   placeholder?: string
 }) {
+  const teamLabel = useStatsTeamLabel()
+
   if (!point) {
     return (
       <div className="mb-3 rounded-xl border border-dashed border-ink/40 bg-soft px-4 py-3">
@@ -122,7 +146,7 @@ function MatchInsightPanel({
         <div className="text-right">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">{statLabel}</p>
           <p className="number text-sm font-bold" style={{ color: PSG_COLOR }}>
-            PSG {formatAnalysisValue(point.psg, suffix, decimals)}
+            {teamLabel} {formatAnalysisValue(point.psg, suffix, decimals)}
           </p>
           <p className="number text-sm font-semibold text-muted">
             Opp {formatAnalysisValue(point.opponent, suffix, decimals)}
@@ -196,6 +220,8 @@ function ChartTooltipContent({
   suffix,
   decimals,
 }: ChartTooltipProps) {
+  const teamLabel = useStatsTeamLabel()
+
   if (!active || !payload?.length) return null
 
   return (
@@ -210,7 +236,7 @@ function ChartTooltipContent({
             entry.payload?.team ??
             entry.payload?.name ??
             (entry.dataKey === 'psg'
-              ? 'PSG'
+              ? teamLabel
               : entry.dataKey === 'opponent'
                 ? 'Opposition'
                 : entry.name)
@@ -236,6 +262,8 @@ function ChartTooltipContent({
 }
 
 function TeamLegend() {
+  const teamLabel = useStatsTeamLabel()
+
   return (
     <div className="flex flex-wrap gap-4 text-xs font-semibold">
       <span className="inline-flex items-center gap-1.5 text-ink">
@@ -243,7 +271,7 @@ function TeamLegend() {
           className="inline-block h-2.5 w-2.5 rounded-sm"
           style={{ background: PSG_COLOR }}
         />
-        PSG
+        {teamLabel}
       </span>
       <span className="inline-flex items-center gap-1.5 text-muted">
         <span
@@ -271,6 +299,7 @@ function ValuePair({
   suffix?: string
   decimals?: number
 }) {
+  const teamLabel = useStatsTeamLabel()
   const delta = formatComparisonDelta({
     key: statKey,
     psg,
@@ -284,7 +313,7 @@ function ValuePair({
       <p className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</p>
       <div className="mt-2 flex items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase text-muted">PSG</p>
+          <p className="text-[10px] font-semibold uppercase text-muted">{teamLabel}</p>
           <p className="number text-2xl font-bold leading-none" style={{ color: PSG_COLOR }}>
             {formatAnalysisValue(psg, suffix, decimals)}
           </p>
@@ -306,7 +335,7 @@ function ValuePair({
                 : 'text-muted'
           }`}
         >
-          {delta.tone === 'psg' ? 'PSG edge' : delta.tone === 'opp' ? 'Opposition edge' : 'Level'} ·{' '}
+          {delta.tone === 'psg' ? `${teamLabel} edge` : delta.tone === 'opp' ? 'Opposition edge' : 'Level'} ·{' '}
           {delta.text}
         </p>
       ) : null}
@@ -337,6 +366,44 @@ type StatsAnalysisProps = {
   recordMatches?: Match[]
   scopeLabel?: string
   theme: Theme
+  enableTeamScope?: boolean
+}
+
+function StatsTeamScopeSelector({
+  teamScope,
+  onChange,
+  teams,
+}: {
+  teamScope: TeamScope
+  onChange: (scope: TeamScope) => void
+  teams: string[]
+}) {
+  return (
+    <div className="border-b border-ink px-6 py-4">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted">View stats for</p>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(OVERALL_TEAM_SCOPE)}
+          className={`shrink-0 transition ${
+            teamScope === OVERALL_TEAM_SCOPE ? tabActiveClass : tabInactiveClass
+          }`}
+        >
+          Overall
+        </button>
+        {teams.map((team) => (
+          <button
+            key={team}
+            type="button"
+            onClick={() => onChange(team)}
+            className={`shrink-0 transition ${teamScope === team ? tabActiveClass : tabInactiveClass}`}
+          >
+            {team}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function StreakHighlightBox({
@@ -449,6 +516,7 @@ function WinStreakRow({ run }: { run: DatedWinStreak }) {
 }
 
 function StreakAnalysisPanel({ matches }: { matches: Match[] }) {
+  const teamLabel = useStatsTeamLabel()
   const analysis = useMemo(() => getStreakAnalysis(matches), [matches])
 
   return (
@@ -474,7 +542,7 @@ function StreakAnalysisPanel({ matches }: { matches: Match[] }) {
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <StreakHighlightBox
             label="Longest unbeaten run"
-            club="PSG"
+            club={teamLabel !== 'Team' ? teamLabel : undefined}
             stats={analysis.longestUnbeaten}
             showBreakdown
           />
@@ -555,6 +623,8 @@ function XgTotalsBlock({
   title: string
   rows: Array<{ label: string; psg: string; opponent?: string }>
 }) {
+  const teamLabel = useStatsTeamLabel()
+
   return (
     <div className="rounded-2xl border border-ink bg-card p-4">
       <p className="text-sm font-semibold text-ink">{title}</p>
@@ -564,7 +634,7 @@ function XgTotalsBlock({
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">{row.label}</p>
             <div className={`mt-2 grid gap-2 ${row.opponent ? 'grid-cols-2' : 'grid-cols-1'}`}>
               <div>
-                <p className="text-[10px] font-semibold uppercase text-muted">PSG</p>
+                <p className="text-[10px] font-semibold uppercase text-muted">{teamLabel}</p>
                 <p className="number mt-1 text-lg font-bold" style={{ color: PSG_COLOR }}>
                   {row.psg}
                 </p>
@@ -602,13 +672,15 @@ function XgComparisonChart({
   }>
   colors: ReturnType<typeof getThemeColors>
 }) {
+  const teamLabel = useStatsTeamLabel()
+
   return (
     <div className="rounded-2xl border border-ink bg-card p-4">
       <p className="text-sm font-semibold text-ink">{title}</p>
       <p className="mt-1 text-xs text-muted">{description}</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {rows.map((row) => {
-          const psgLabel = row.psgLabel ?? 'PSG'
+          const psgLabel = row.psgLabel ?? teamLabel
           const secondLabel = row.secondLabel ?? 'xG'
           const barData = [
             { team: psgLabel, value: row.psg, color: row.psgColor ?? PSG_COLOR },
@@ -690,6 +762,7 @@ function XgAnalysisPanel({
   matches: Match[]
   colors: ReturnType<typeof getThemeColors>
 }) {
+  const teamLabel = useStatsTeamLabel()
   const analysis = useMemo(() => buildXgAnalysis(matches), [matches])
   const trendData = useMemo(
     () =>
@@ -764,7 +837,7 @@ function XgAnalysisPanel({
 
       <div className="grid gap-4 lg:grid-cols-2">
         <XgTotalsBlock
-          title="PSG goals vs xG"
+          title={`${teamLabel} goals vs xG`}
           rows={[
             {
               label: 'Season totals',
@@ -802,7 +875,7 @@ function XgAnalysisPanel({
       <div className="rounded-2xl border border-ink bg-card p-4">
         <p className="text-sm font-semibold text-ink">xG scoreline record</p>
         <p className="mt-1 text-xs text-muted">
-          Matches where PSG&apos;s xG beat the opposition&apos;s xG ({analysis.totalXgScoreline ?? 'totals unavailable'} total ·{' '}
+          Matches where {teamLabel === 'Team' ? "your team's" : `${teamLabel}'s`} xG beat the opposition&apos;s xG ({analysis.totalXgScoreline ?? 'totals unavailable'} total ·{' '}
           {analysis.avgXgScoreline ?? 'avg unavailable'} per match)
         </p>
         <XgRecordTiles record={analysis.xgRecord} />
@@ -824,7 +897,7 @@ function XgAnalysisPanel({
         colors={colors}
         rows={[
           {
-            label: 'PSG attack',
+            label: `${teamLabel} attack`,
             psg: analysis.psgGoalsTotal,
             opponent: analysis.psgXgTotal,
             opponentColor: '#8ADFC8',
@@ -832,7 +905,7 @@ function XgAnalysisPanel({
           ...(analysis.bothXgMatchCount
             ? [
                 {
-                  label: 'PSG defence',
+                  label: `${teamLabel} defence`,
                   psg: analysis.concededTotal,
                   opponent: analysis.xgAgainstTotal,
                   psgLabel: 'Conceded',
@@ -985,16 +1058,65 @@ export default function DetailedStats({
   recordMatches = matches,
   scopeLabel,
   theme,
+  enableTeamScope = false,
 }: StatsAnalysisProps) {
+  const [teamScope, setTeamScope] = useState<TeamScope>(OVERALL_TEAM_SCOPE)
+  const availableTeams = useMemo(
+    () => (enableTeamScope ? getTeamsFromMatches([...matches, ...recordMatches]) : []),
+    [enableTeamScope, matches, recordMatches],
+  )
+  const scopedMatches = useMemo(
+    () => (enableTeamScope ? filterMatchesByTeamScope(matches, teamScope) : matches),
+    [enableTeamScope, matches, teamScope],
+  )
+  const scopedRecordMatches = useMemo(
+    () => (enableTeamScope ? filterMatchesByTeamScope(recordMatches, teamScope) : recordMatches),
+    [enableTeamScope, recordMatches, teamScope],
+  )
+  const teamLabel = useMemo(() => {
+    if (enableTeamScope) return getStatsTeamLabel(teamScope)
+    if (matches.length === 1) return getMatchPlayedAs(matches[0])
+    return 'Team'
+  }, [enableTeamScope, teamScope, matches])
+  const scopeContextValue = useMemo(
+    () => ({ teamScope: enableTeamScope ? teamScope : OVERALL_TEAM_SCOPE, teamLabel }),
+    [enableTeamScope, teamScope, teamLabel],
+  )
+
   const colors = useMemo(() => getThemeColors(theme), [theme])
-  const statMatches = useMemo(() => matchesWithStats(matches), [matches])
+  const statMatches = useMemo(() => matchesWithStats(scopedMatches), [scopedMatches])
   const hasStatData = statMatches.length > 0
-  const hasRecordData = recordMatches.length > 0
+  const hasRecordData = scopedRecordMatches.length > 0
+  const hasAnySourceData = matches.length > 0 || recordMatches.length > 0
   const [activeIndex, setActiveIndex] = useState(0)
   const activeCategory = statsCategories[activeIndex] ?? statsCategories[0]
   const isInsightPage = isInsightStatsCategory(activeCategory)
   const carouselRef = useRef<HTMLDivElement>(null)
   const touchStartX = useRef<number | null>(null)
+
+  const resolvedScopeLabel = useMemo(() => {
+    if (scopeLabel) return scopeLabel
+    if (!enableTeamScope) {
+      return hasStatData
+        ? `${statMatches.length} logged matches · averages per match, ${teamLabel} vs opposition`
+        : `${scopedRecordMatches.length} logged matches · streak analysis available`
+    }
+
+    const teamSuffix =
+      teamScope === OVERALL_TEAM_SCOPE ? 'all teams' : `played as ${teamScope}`
+    if (hasStatData) {
+      return `${statMatches.length} logged matches (${teamSuffix}) · averages per match, ${teamLabel} vs opposition`
+    }
+    return `${scopedRecordMatches.length} logged matches (${teamSuffix}) · streak analysis available`
+  }, [
+    enableTeamScope,
+    hasStatData,
+    scopeLabel,
+    scopedRecordMatches.length,
+    statMatches.length,
+    teamLabel,
+    teamScope,
+  ])
 
   const goTo = (index: number) => {
     const next = Math.max(0, Math.min(statsCategories.length - 1, index))
@@ -1019,7 +1141,7 @@ export default function DetailedStats({
     touchStartX.current = null
   }
 
-  if (!hasStatData && !hasRecordData) {
+  if (!hasAnySourceData) {
     return (
       <section className={`${panelClass} p-6`}>
         <h3 className={headingClass}>Detailed stats analysis</h3>
@@ -1031,20 +1153,37 @@ export default function DetailedStats({
     )
   }
 
+  const emptyScopedView = enableTeamScope && !hasStatData && !hasRecordData
+
   return (
-    <section className={`${panelClass} overflow-hidden`}>
+    <StatsTeamScopeContext.Provider value={scopeContextValue}>
+      <section className={`${panelClass} overflow-hidden`}>
+        {enableTeamScope && availableTeams.length ? (
+          <StatsTeamScopeSelector
+            teamScope={teamScope}
+            onChange={setTeamScope}
+            teams={availableTeams}
+          />
+        ) : null}
+
+        {emptyScopedView ? (
+          <div className="px-6 py-8">
+            <h3 className={headingClass}>No matches for this team</h3>
+            <p className="mt-2 text-sm text-muted">
+              {teamScope === OVERALL_TEAM_SCOPE
+                ? 'Log matches to unlock stats analysis.'
+                : `No logged matches found for ${teamScope}. Try Overall or another team.`}
+            </p>
+          </div>
+        ) : (
+          <>
       <div className="border-b border-ink px-6 py-5">
         <p className="record-display-font text-xs font-bold uppercase text-muted">
           {isInsightPage ? 'Insights' : 'Match stats breakdown'}
         </p>
         <h3 className={`${headingClass} mt-1`}>{isInsightPage ? activeCategory.label : 'Stat analysis'}</h3>
         <p className="mt-1 text-sm text-muted">
-          {isInsightPage
-            ? activeCategory.description
-            : scopeLabel ??
-              (hasStatData
-                ? `${statMatches.length} logged matches · averages per match, PSG vs opposition`
-                : `${recordMatches.length} logged matches · streak analysis available`)}
+          {isInsightPage ? activeCategory.description : resolvedScopeLabel}
         </p>
       </div>
 
@@ -1112,7 +1251,7 @@ export default function DetailedStats({
         {statsCategories.map((category) => (
           <div key={category.id} className="w-full shrink-0 snap-center p-6">
             {category.id === 'streaks' ? (
-              <StreakAnalysisPanel matches={recordMatches} />
+              <StreakAnalysisPanel matches={scopedRecordMatches} />
             ) : category.id === 'xg' ? (
               <XgAnalysisPanel matches={statMatches} colors={colors} />
             ) : (
@@ -1153,7 +1292,10 @@ export default function DetailedStats({
           Next →
         </button>
       </div>
+          </>
+        )}
     </section>
+    </StatsTeamScopeContext.Provider>
   )
 }
 
@@ -1202,6 +1344,7 @@ function CategoryPanel({
   matches: Match[]
   colors: ReturnType<typeof getThemeColors>
 }) {
+  const teamLabel = useStatsTeamLabel()
   const [comparisonMode, setComparisonMode] = useState<ComparisonMode>('total')
   const rows = useMemo(
     () => buildComparisonRows(matches, category.stats, comparisonMode),
@@ -1229,7 +1372,7 @@ function CategoryPanel({
           </div>
           {comparable > 0 ? (
             <div className="rounded-xl border border-ink bg-card px-3 py-2 text-right">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">PSG ahead</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">{teamLabel} ahead</p>
               <p className="number text-xl font-bold text-ink">
                 {psgWins}
                 <span className="text-sm font-medium text-muted"> / {comparable}</span>
@@ -1335,6 +1478,7 @@ function StatComparisonChart({
   row: ComparisonRow
   colors: ReturnType<typeof getThemeColors>
 }) {
+  const teamLabel = useStatsTeamLabel()
   const hasPsg = typeof row.psg === 'number'
   const hasOpponent = typeof row.opponent === 'number'
 
@@ -1348,7 +1492,7 @@ function StatComparisonChart({
   }
 
   const barData = [
-    { team: 'PSG', value: row.psg ?? 0, color: PSG_COLOR },
+    { team: teamLabel, value: row.psg ?? 0, color: PSG_COLOR },
     { team: 'Opposition', value: row.opponent ?? 0, color: OPP_COLOR },
   ]
   const yAxis = getYAxisConfig(row.psg, row.opponent, row.suffix, row.decimals, row.key)
@@ -1364,7 +1508,7 @@ function StatComparisonChart({
           </p>
           <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
             <p>
-              <span className="font-semibold text-muted">PSG </span>
+              <span className="font-semibold text-muted">{teamLabel} </span>
               <span className="number font-bold" style={{ color: PSG_COLOR }}>
                 {formatAnalysisValue(row.psg, row.suffix, row.decimals)}
               </span>
@@ -1434,11 +1578,12 @@ function PossessionComparisonChart({
   row: ComparisonRow
   colors: ReturnType<typeof getThemeColors>
 }) {
+  const teamLabel = useStatsTeamLabel()
   const psgValue = typeof row.psg === 'number' ? row.psg : 0
   const opponentValue =
     typeof row.opponent === 'number' ? row.opponent : Math.max(100 - psgValue, 0)
   const pieData = [
-    { name: 'PSG', value: psgValue, color: PSG_COLOR },
+    { name: teamLabel, value: psgValue, color: PSG_COLOR },
     { name: 'Opposition', value: opponentValue, color: OPP_COLOR },
   ]
 
@@ -1474,7 +1619,7 @@ function PossessionComparisonChart({
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-8">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-            PSG share
+            {teamLabel} share
           </span>
           <span className="number mt-1 text-3xl font-bold" style={{ color: PSG_COLOR }}>
             {formatAnalysisValue(row.psg, '%', row.decimals)}
@@ -1503,6 +1648,7 @@ function TrendChart({
   statKey?: ComparisonRow['key']
   colors: ReturnType<typeof getThemeColors>
 }) {
+  const teamLabel = useStatsTeamLabel()
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null)
   const hoveredPoint = hoveredIndex != null ? (data[hoveredIndex] ?? null) : null
   const psgValues = data.map((entry) => entry.psg).filter((value): value is number => typeof value === 'number')
@@ -1562,7 +1708,7 @@ function TrendChart({
             <Line
               type="monotone"
               dataKey="psg"
-              name="PSG"
+              name={teamLabel}
               stroke={PSG_COLOR}
               strokeWidth={3}
               style={{ pointerEvents: 'none' }}
@@ -1602,12 +1748,14 @@ function ComparisonValueBlock({
   suffix?: string
   decimals?: number
 }) {
+  const teamLabel = useStatsTeamLabel()
+
   return (
     <div className="rounded-xl bg-soft px-3 py-2">
       <p className="text-[10px] font-semibold uppercase text-muted">{label}</p>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <div>
-          <p className="text-[10px] font-semibold uppercase text-muted">PSG</p>
+          <p className="text-[10px] font-semibold uppercase text-muted">{teamLabel}</p>
           <p className="number mt-1 text-lg font-bold" style={{ color: PSG_COLOR }}>
             {formatAnalysisValue(psg, suffix, decimals)}
           </p>
@@ -1624,6 +1772,7 @@ function ComparisonValueBlock({
 }
 
 function ComparisonStatRow({ row }: { row: ComparisonRow }) {
+  const teamLabel = useStatsTeamLabel()
   const delta = formatComparisonDelta(row)
   const averageDelta = formatComparisonDelta({
     key: row.key,
@@ -1662,7 +1811,7 @@ function ComparisonStatRow({ row }: { row: ComparisonRow }) {
             <p className="mt-1 text-xs text-muted">Season total and per-match average</p>
           )}
           {row.averageOnly && row.psgWins === true ? (
-            <p className="mt-1 text-xs font-semibold text-[#05CD99]">PSG ahead on average</p>
+            <p className="mt-1 text-xs font-semibold text-[#05CD99]">{teamLabel} ahead on average</p>
           ) : null}
           {row.averageOnly && row.psgWins === false ? (
             <p className="mt-1 text-xs font-semibold text-muted">Opposition ahead on average</p>
@@ -1755,6 +1904,7 @@ function EfficiencyGauge({
   opponent: number | null
   suffix: string
 }) {
+  const teamLabel = useStatsTeamLabel()
   const psgValue = typeof psg === 'number' ? Math.min(Math.max(psg, 0), 100) : null
   const opponentValue = typeof opponent === 'number' ? Math.min(Math.max(opponent, 0), 100) : null
   const delta = formatComparisonDelta({
@@ -1770,7 +1920,7 @@ function EfficiencyGauge({
       <p className="text-sm font-semibold text-ink">{label}</p>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <div className="rounded-xl bg-soft px-3 py-2 text-center">
-          <p className="text-[10px] font-semibold uppercase text-muted">PSG</p>
+          <p className="text-[10px] font-semibold uppercase text-muted">{teamLabel}</p>
           <p className="number mt-1 text-xl font-bold" style={{ color: PSG_COLOR }}>
             {formatAnalysisValue(psgValue, suffix)}
           </p>

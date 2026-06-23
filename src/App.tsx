@@ -535,7 +535,7 @@ function App() {
               matches={matches.filter(isStatsMatch)}
               recordMatches={matches}
               theme={theme}
-              scopeLabel={`Season view · ${matches.filter(isStatsMatch).length} matches logged`}
+              enableTeamScope
             />
           )}
           {view === 'add' && (
